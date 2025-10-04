@@ -7,7 +7,8 @@ export const mockDrives: Drive[] = [
   { id: 'd3', name: 'SanDisk USB (E:)', type: DriveType.USB, size: '58.2 GB' },
 ];
 
-const fileNames = {
+// Fix: Add explicit Record type to help TypeScript understand the object's structure and fix indexing error.
+const fileNames: Record<FileType, string[]> = {
   [FileType.Image]: ['holiday_photo.jpg', 'family_portrait.png', 'vacation_sunset.jpeg', 'project_diagram.tiff', 'logo_design.svg'],
   [FileType.Video]: ['birthday_party.mp4', 'conference_recording.mov', 'drone_footage.avi', 'wedding_highlights.mkv'],
   [FileType.Document]: ['quarterly_report.docx', 'presentation_slides.pptx', 'project_proposal.pdf', 'meeting_notes.txt', 'financial_data.xlsx'],

@@ -52,6 +52,11 @@ const FileTransferPage: React.FC = () => {
     const isSender = useRef(false);
     
     const progressHistory = useRef<{ time: number, bytes: number }[]>([]);
+    const peerConnectedRef = useRef(peerConnected);
+
+    useEffect(() => {
+        peerConnectedRef.current = peerConnected;
+    }, [peerConnected]);
 
     useEffect(() => {
         setHistory(getHistory());
@@ -124,7 +129,7 @@ const FileTransferPage: React.FC = () => {
         ws.current.onopen = onOpenCallback;
         ws.current.onmessage = handleSignalingMessage;
         ws.current.onerror = () => setStatus({ type: 'error', message: 'Signaling server connection error. Please ensure it is running and accessible.' });
-        ws.current.onclose = () => { if (peerConnected) setStatus({ type: 'error', message: 'Signaling server disconnected.' }); };
+        ws.current.onclose = () => { if (peerConnectedRef.current) setStatus({ type: 'error', message: 'Signaling server disconnected.' }); };
     };
 
     const initializeModules = () => {
