@@ -32,11 +32,17 @@
               'slide-in': {
                 '0%': { transform: 'translateY(20px)', opacity: 0 },
                 '100%': { transform: 'translateY(0)', opacity: 1 },
+              },
+              'glowing': {
+                '0%': { boxShadow: '0 0 3px #E63946' },
+                '50%': { boxShadow: '0 0 15px #E63946' },
+                '100%': { boxShadow: '0 0 3px #E63946' },
               }
             },
             animation: {
              'pulse-fast': 'pulse-fast 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
              'slide-in': 'slide-in 0.5s ease-out forwards',
+             'glowing': 'glowing 3s ease-in-out infinite',
             }
           }
         }

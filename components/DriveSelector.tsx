@@ -12,7 +12,7 @@ const DriveSelector: React.FC<DriveSelectorProps> = ({ onScrollToSection }) => {
     <section className="animate-slide-in">
         {/* Hero Section */}
         <div className="text-center py-16 md:py-24">
-            <div className="inline-block bg-primary-light/10 text-primary-light p-3 rounded-full mb-4">
+            <div className="inline-block bg-primary-light/10 text-primary-light p-3 rounded-full mb-4 animate-glowing">
                 <SwazLogoIcon className="w-8 h-8" />
             </div>
             <h1 className="text-4xl md:text-6xl font-extrabold mb-4 text-text-light dark:text-text-dark leading-tight">
@@ -23,7 +23,7 @@ const DriveSelector: React.FC<DriveSelectorProps> = ({ onScrollToSection }) => {
             </p>
             <button
                 onClick={() => onScrollToSection('services')}
-                className="px-8 py-4 bg-primary-light text-white font-bold rounded-lg shadow-lg hover:bg-secondary-light transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent"
+                className="px-8 py-4 bg-primary-light text-white font-bold rounded-lg shadow-lg hover:bg-secondary-light transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent"
             >
                 Explore Our Services
             </button>

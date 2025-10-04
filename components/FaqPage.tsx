@@ -212,7 +212,7 @@ const FaqPage: React.FC<FaqPageProps> = ({ onScrollToSection }) => {
                      <button 
                         onClick={() => handleResourceClick(resource.id)} 
                         key={index} 
-                        className="block p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-transform duration-300 text-left"
+                        className="block p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-transform duration-300 text-left"
                     >
                         <DocumentIcon className="w-8 h-8 mb-3 text-accent" />
                         <h3 className="font-semibold text-text-light dark:text-text-dark">{resource.title}</h3>
@@ -229,7 +229,7 @@ const FaqPage: React.FC<FaqPageProps> = ({ onScrollToSection }) => {
             </p>
             <button
                 onClick={() => onScrollToSection('contact')}
-                className="mt-8 px-8 py-4 bg-accent text-white font-bold rounded-lg shadow-lg hover:bg-opacity-80 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
+                className="mt-8 px-8 py-4 bg-accent text-white font-bold rounded-lg shadow-lg hover:bg-opacity-80 transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/50"
             >
                 Contact Support
             </button>

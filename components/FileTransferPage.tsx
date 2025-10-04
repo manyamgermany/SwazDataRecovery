@@ -517,7 +517,7 @@ const FileTransferPage: React.FC = () => {
                 <ShareIcon className="w-12 h-12 text-primary-light mb-4"/>
                 <h2 className="text-2xl font-bold mb-2">Send Files</h2>
                 <p className="text-gray-500 dark:text-gray-400 flex-grow mb-4">Select files and create a secure room to share them.</p>
-                <button onClick={() => { setView('host'); }} className="w-full px-6 py-3 bg-primary-light text-white font-bold rounded-lg shadow-md hover:bg-secondary-light transition-colors">
+                <button onClick={() => { setView('host'); }} className="w-full px-6 py-3 bg-primary-light text-white font-bold rounded-lg shadow-md hover:bg-secondary-light transition-all active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                     Start Sending
                 </button>
             </div>
@@ -533,7 +533,7 @@ const FileTransferPage: React.FC = () => {
                     aria-label="Enter Room ID to receive files"
                     className="w-full text-center font-mono text-lg px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-md border border-transparent focus:outline-none focus:ring-2 focus:ring-accent"
                 />
-                <button onClick={() => handleStartReceiving()} disabled={!joinRoomId.trim()} className="mt-4 w-full px-6 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onClick={() => handleStartReceiving()} disabled={!joinRoomId.trim()} className="mt-4 w-full px-6 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                     Join & Receive
                 </button>
             </div>

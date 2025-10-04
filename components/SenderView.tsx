@@ -169,8 +169,8 @@ const FileDropzone: React.FC<{onFilesSelected: (files: File[]) => void}> = ({ on
                 <p className="text-xl font-semibold text-text-light dark:text-text-dark">Drag & drop files or folders here</p>
                 <p className="text-gray-500 dark:text-gray-400 mt-2">or select manually</p>
                 <div className="mt-4 flex gap-4 justify-center">
-                    <button type="button" onClick={handleFileSelect} className="px-4 py-2 bg-accent text-white font-semibold rounded-lg hover:bg-opacity-80 transition-colors">Select Files</button>
-                    <button type="button" onClick={handleFolderSelect} className="px-4 py-2 bg-accent text-white font-semibold rounded-lg hover:bg-opacity-80 transition-colors">Select Folder</button>
+                    <button type="button" onClick={handleFileSelect} className="px-4 py-2 bg-accent text-white font-semibold rounded-lg hover:bg-opacity-80 transition-all active:scale-95">Select Files</button>
+                    <button type="button" onClick={handleFolderSelect} className="px-4 py-2 bg-accent text-white font-semibold rounded-lg hover:bg-opacity-80 transition-all active:scale-95">Select Folder</button>
                 </div>
                 <input id="file-upload" ref={fileInputRef} type="file" multiple className="hidden" onChange={handleChange} />
             </div>
@@ -214,8 +214,8 @@ const ScheduleTransferModal: React.FC<{ onConfirm: (time: number) => void; onClo
                         className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-md border border-transparent focus:outline-none focus:ring-2 focus:ring-accent"
                     />
                     <div className="flex justify-end gap-3">
-                         <button onClick={onClose} className="px-4 py-2 bg-gray-200 dark:bg-gray-600 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
-                         <button onClick={handleConfirm} className="px-4 py-2 bg-primary-light text-white font-bold rounded-lg shadow-md hover:bg-secondary-light">Confirm</button>
+                         <button onClick={onClose} className="px-4 py-2 bg-gray-200 dark:bg-gray-600 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors active:scale-95">Cancel</button>
+                         <button onClick={handleConfirm} className="px-4 py-2 bg-primary-light text-white font-bold rounded-lg shadow-md hover:bg-secondary-light transition-colors active:scale-95">Confirm</button>
                     </div>
                 </div>
              </div>
@@ -359,13 +359,13 @@ const SenderView: React.FC<SenderViewProps> = ({
                     <div className="mt-6 w-full text-left animate-slide-in">
                         <div className="flex justify-between items-center mb-2">
                              <h3 className="font-bold text-lg">Files to Send</h3>
-                             <button onClick={handleClearAll} className="flex items-center gap-1 px-2 py-1 text-sm text-red-500 hover:bg-red-500/10 rounded-md">
+                             <button onClick={handleClearAll} className="flex items-center gap-1 px-2 py-1 text-sm text-red-500 hover:bg-red-500/10 rounded-md transition-colors active:scale-95">
                                 <TrashIcon className="w-4 h-4" /> Clear All
                             </button>
                         </div>
                         <div className="space-y-2 max-h-60 overflow-y-auto p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-700">
                             {selectedFiles.map((file, index) => (
-                                <div key={`${file.name}-${file.lastModified}-${index}`} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-md shadow-sm">
+                                <div key={`${file.name}-${file.lastModified}-${index}`} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-md shadow-sm animate-slide-in">
                                     <div className="flex items-center gap-3 truncate min-w-0">
                                         {getFileTypeIcon(file.type)}
                                         <div className="truncate">
@@ -375,7 +375,7 @@ const SenderView: React.FC<SenderViewProps> = ({
                                     </div>
                                     <button 
                                         onClick={() => handleRemoveFile(index)}
-                                        className="p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-colors flex-shrink-0 ml-2"
+                                        className="-m-2 p-2 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-500/10 active:bg-red-500/20 transition-colors flex-shrink-0 ml-2"
                                         aria-label={`Remove ${file.name}`}
                                     >
                                         <XCircleIcon className="w-6 h-6"/>
@@ -390,10 +390,10 @@ const SenderView: React.FC<SenderViewProps> = ({
                         </div>
                         
                         <div className="mt-4 grid grid-cols-2 gap-3">
-                             <button onClick={() => setIsScheduling(true)} className="w-full px-4 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2">
+                             <button onClick={() => setIsScheduling(true)} className="w-full px-4 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-all active:scale-95 flex items-center justify-center gap-2">
                                 <CalendarIcon className="w-5 h-5"/> Schedule
                             </button>
-                            <button onClick={handleStart} className="w-full px-4 py-3 bg-primary-light text-white font-bold rounded-lg shadow-md hover:bg-secondary-light transition-colors">
+                            <button onClick={handleStart} className="w-full px-4 py-3 bg-primary-light text-white font-bold rounded-lg shadow-md hover:bg-secondary-light transition-all active:scale-95">
                                Create Secure Room & Send
                             </button>
                         </div>
@@ -418,10 +418,10 @@ const SenderView: React.FC<SenderViewProps> = ({
                         Your peer must join the room before the countdown ends.
                     </p>
                      <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
-                         <button onClick={() => setIsShareModalOpen(true)} className="px-6 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2">
+                         <button onClick={() => setIsShareModalOpen(true)} className="px-6 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-all active:scale-95 flex items-center justify-center gap-2">
                             <ShareIcon className="w-5 h-5" /> Share Link
                         </button>
-                        <button onClick={onCancelSchedule} className="px-6 py-3 bg-red-500 text-white font-bold rounded-lg shadow-md hover:bg-red-600">
+                        <button onClick={onCancelSchedule} className="px-6 py-3 bg-red-500 text-white font-bold rounded-lg shadow-md hover:bg-red-600 transition-all active:scale-95">
                            Cancel Schedule
                         </button>
                     </div>
@@ -443,7 +443,7 @@ const SenderView: React.FC<SenderViewProps> = ({
                     <p className="text-gray-600 dark:text-gray-400 mb-3">A secure room has been created. Invite your peer to begin the transfer.</p>
                     <button 
                         onClick={() => setIsShareModalOpen(true)} 
-                        className="w-full sm:w-auto px-6 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2 mx-auto"
+                        className="w-full sm:w-auto px-6 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-all active:scale-95 flex items-center justify-center gap-2 mx-auto"
                     >
                        <ShareIcon className="w-5 h-5" />
                        Generate & Share Link
@@ -473,16 +473,16 @@ const SenderView: React.FC<SenderViewProps> = ({
             
             <div className="flex items-center justify-center gap-4 mt-4">
                 {transferState === 'transferring' && (
-                    <button onClick={onPauseTransfer} className="px-6 py-2 bg-yellow-500 text-white font-bold rounded-lg shadow-md hover:bg-yellow-600 flex items-center gap-2">
+                    <button onClick={onPauseTransfer} className="px-6 py-2 bg-yellow-500 text-white font-bold rounded-lg shadow-md hover:bg-yellow-600 transition-all active:scale-95 flex items-center gap-2">
                        <PauseIcon className="w-5 h-5"/> Pause
                     </button>
                 )}
                 {transferState === 'paused' && (
-                     <button onClick={onResumeTransfer} className="px-6 py-2 bg-green-500 text-white font-bold rounded-lg shadow-md hover:bg-green-600 flex items-center gap-2">
+                     <button onClick={onResumeTransfer} className="px-6 py-2 bg-green-500 text-white font-bold rounded-lg shadow-md hover:bg-green-600 transition-all active:scale-95 flex items-center gap-2">
                        <PlayIcon className="w-5 h-5"/> Resume
                     </button>
                 )}
-                <button onClick={onCancelTransfer} className="px-6 py-2 bg-gray-500 text-white font-bold rounded-lg shadow-md hover:bg-gray-600">
+                <button onClick={onCancelTransfer} className="px-6 py-2 bg-gray-500 text-white font-bold rounded-lg shadow-md hover:bg-gray-600 transition-all active:scale-95">
                     Cancel
                 </button>
             </div>

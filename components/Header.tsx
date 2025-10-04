@@ -34,7 +34,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
     <>
       <header className="bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm shadow-md sticky top-0 z-50 transition-colors duration-500">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <button onClick={() => handleNavClick('home')} className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-accent rounded-lg p-1">
+          <button onClick={() => handleNavClick('home')} className="flex items-center space-x-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg p-1 transition-transform active:scale-95">
             <SwazLogoIcon className="w-8 h-8 text-primary-light" />
             <h1 className="text-lg md:text-xl font-bold text-text-light dark:text-text-dark">
               Swaz Data Recovery Labs
@@ -47,14 +47,18 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                   <button
                     key={link.view}
                     onClick={() => handleNavClick(link.view)}
-                    className="font-semibold text-text-light dark:text-text-dark hover:text-accent dark:hover:text-accent-light transition-colors duration-300 px-2 py-1 rounded-md"
+                    className={`px-3 py-1.5 rounded-md transition-all duration-300 active:scale-95 ${
+                        link.label === 'File Transfer' 
+                        ? 'font-bold text-primary-light bg-primary-light/10 hover:bg-primary-light/20' 
+                        : 'font-semibold text-text-light dark:text-text-dark hover:text-accent dark:hover:text-accent-light'
+                    }`}
                 >
                     {link.label}
                 </button>
               ))}
               <button
                   onClick={toggleTheme}
-                  className="p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent focus:ring-offset-background-light dark:focus:ring-offset-background-dark text-text-light dark:text-text-dark"
+                  className="p-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent focus-visible:ring-offset-background-light dark:focus-visible:ring-offset-background-dark text-text-light dark:text-text-dark transition-transform active:scale-95"
                   aria-label="Toggle theme"
               >
                   {theme === 'light' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}
@@ -65,12 +69,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
           <div className="sm:hidden flex items-center">
              <button
                   onClick={toggleTheme}
-                  className="p-2 rounded-full text-text-light dark:text-text-dark mr-2"
+                  className="p-2 rounded-full text-text-light dark:text-text-dark mr-2 transition-transform active:scale-95"
                   aria-label="Toggle theme"
               >
                   {theme === 'light' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}
               </button>
-            <button onClick={() => setIsMenuOpen(true)} className="p-2" aria-label="Open menu">
+            <button onClick={() => setIsMenuOpen(true)} className="p-2 transition-transform active:scale-95" aria-label="Open menu">
               <MenuIcon className="w-6 h-6 text-text-light dark:text-text-dark" />
             </button>
           </div>
@@ -80,7 +84,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
       {/* Mobile Menu Overlay */}
       <div className={`fixed inset-0 z-[100] bg-background-light dark:bg-background-dark p-4 transform transition-transform duration-300 ease-in-out ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'} sm:hidden`}>
           <div className="flex justify-end mb-8">
-              <button onClick={() => setIsMenuOpen(false)} className="p-2" aria-label="Close menu">
+              <button onClick={() => setIsMenuOpen(false)} className="p-2 transition-transform active:scale-95" aria-label="Close menu">
                   <CloseIcon className="w-8 h-8 text-text-light dark:text-text-dark"/>
               </button>
           </div>
@@ -89,7 +93,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                   <button
                     key={link.view}
                     onClick={() => handleNavClick(link.view)}
-                    className="text-3xl font-bold text-text-light dark:text-text-dark hover:text-accent transition-colors"
+                    className={`text-3xl font-bold transition-all active:scale-95 ${
+                        link.label === 'File Transfer'
+                        ? 'text-primary-light'
+                        : 'text-text-light dark:text-text-dark hover:text-accent'
+                    }`}
                 >
                     {link.label}
                 </button>

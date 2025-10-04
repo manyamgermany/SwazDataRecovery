@@ -1,5 +1,5 @@
 import React from 'react';
-import { HddIcon, SsdIcon, UsbIcon, RaidIcon, MobileIcon, SwazLogoIcon } from './icons/Icons';
+import { HddIcon, SsdIcon, UsbIcon, RaidIcon, SwazLogoIcon } from './icons/Icons';
 import { AppView } from '../App';
 
 interface ServicesPageProps {
@@ -27,11 +27,6 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onScrollToSection }) => {
         icon: <RaidIcon className="w-12 h-12 mb-4 text-primary-light" />,
         title: 'RAID Recovery',
         description: 'Complex RAID array failures require expert handling. We can recover data from all RAID levels (RAID 0, 1, 5, 6, 10).',
-      },
-      {
-        icon: <MobileIcon className="w-12 h-12 mb-4 text-primary-light" />,
-        title: 'Mobile Device Recovery',
-        description: 'Lost photos, contacts, or messages? We provide recovery services for smartphones and tablets across various operating systems.',
       },
     ];
 
@@ -68,7 +63,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onScrollToSection }) => {
             We provide expert data recovery solutions for a wide range of devices and data loss scenarios.
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {services.map((service, index) => (
             <div key={index} className="p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 flex flex-col items-center text-center">
               {service.icon}
@@ -119,7 +114,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onScrollToSection }) => {
         </p>
         <button
             onClick={() => onScrollToSection('home')}
-            className="mt-8 px-8 py-4 bg-primary-light text-white font-bold rounded-lg shadow-lg hover:bg-secondary-light transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent"
+            className="mt-8 px-8 py-4 bg-primary-light text-white font-bold rounded-lg shadow-lg hover:bg-secondary-light transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent"
         >
             Start Your Recovery Now
         </button>

@@ -79,7 +79,7 @@ const TransferHistory: React.FC<TransferHistoryProps> = ({ history, onClear }) =
                             <span className="text-sm font-semibold text-gray-500 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{history.length}</span>
                              <button 
                                 onClick={onClear} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                                 aria-label="Clear transfer history"
                             >
                                 <TrashIcon className="w-4 h-4"/>
@@ -94,7 +94,7 @@ const TransferHistory: React.FC<TransferHistoryProps> = ({ history, onClear }) =
                          <div className="space-y-2 max-h-[400px] overflow-y-auto pt-4 pr-2">
                              {history.map(entry => (
                                  <div key={entry.id} className="bg-gray-50 dark:bg-gray-700/50 rounded-md">
-                                     <button onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)} className="w-full grid grid-cols-[auto,1fr,auto,auto] sm:grid-cols-[auto,1fr,auto,auto,auto] items-center gap-x-3 p-2 text-left">
+                                     <button onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)} className="w-full grid grid-cols-[auto,1fr,auto,auto] sm:grid-cols-[auto,1fr,auto,auto,auto] items-center gap-x-3 p-2 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 rounded-md">
                                          <StatusIcon status={entry.status} />
                                          <div className="flex items-center gap-3 min-w-0">
                                             {getFileTypeIcon(entry.fileType)}

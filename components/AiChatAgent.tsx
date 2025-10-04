@@ -57,10 +57,10 @@ const ConfirmationForm: React.FC<{ details: UserDetails; onSubmit: () => void; o
                 ))}
             </ul>
             <div className="flex gap-2">
-                <button onClick={onSubmit} className="flex-1 px-3 py-2 text-sm bg-primary-light text-white font-bold rounded-lg hover:bg-secondary-light transition-colors">
+                <button onClick={onSubmit} className="flex-1 px-3 py-2 text-sm bg-primary-light text-white font-bold rounded-lg hover:bg-secondary-light transition-colors active:scale-95">
                     Submit Inquiry
                 </button>
-                <button onClick={onEdit} className="flex-1 px-3 py-2 text-sm bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors">
+                <button onClick={onEdit} className="flex-1 px-3 py-2 text-sm bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors active:scale-95">
                     Edit Details
                 </button>
             </div>
@@ -289,7 +289,7 @@ const AiChatAgent: React.FC = () => {
             {/* Floating Action Button */}
             <button
                 onClick={() => setIsOpen(true)}
-                className={`fixed bottom-6 right-6 w-16 h-16 bg-primary-light text-white rounded-full shadow-2xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:bg-secondary-light focus:outline-none focus:ring-4 focus:ring-accent ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+                className={`fixed bottom-6 right-6 w-16 h-16 bg-primary-light text-white rounded-full shadow-2xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
                 aria-label="Open AI Chat Agent"
             >
                 <ChatBubbleIcon className="w-8 h-8" />
@@ -306,7 +306,7 @@ const AiChatAgent: React.FC = () => {
                     <div className="flex items-center space-x-1">
                         <button
                             onClick={handleResetChat}
-                            className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
+                            className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:bg-gray-300 dark:active:bg-gray-600"
                             aria-label="Start New Chat"
                             title="Start New Chat"
                             disabled={isLoading}
@@ -315,14 +315,14 @@ const AiChatAgent: React.FC = () => {
                         </button>
                          <button
                             onClick={handleResetChat}
-                            className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
+                            className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:bg-gray-300 dark:active:bg-gray-600"
                             aria-label="Clear Chat History"
                             title="Clear Chat History"
                             disabled={isLoading}
                         >
                             <TrashIcon className="w-5 h-5" />
                         </button>
-                        <button onClick={() => setIsOpen(false)} className="p-1 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Close chat">
+                        <button onClick={() => setIsOpen(false)} className="p-1 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:bg-gray-300 dark:active:bg-gray-600" aria-label="Close chat">
                             <CloseIcon className="w-6 h-6" />
                         </button>
                     </div>
@@ -348,7 +348,7 @@ const AiChatAgent: React.FC = () => {
                                         <button
                                             onClick={() => handleFeedback(msg.id, 'good')}
                                             disabled={!!msg.feedback}
-                                            className={`p-1 rounded-full transition-colors ${
+                                            className={`p-1 rounded-full transition-all active:scale-90 ${
                                                 msg.feedback === 'good' ? 'text-green-500 bg-green-100 dark:bg-green-900/50' : 
                                                 msg.feedback ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' :
                                                 'text-gray-400 hover:text-green-500'
@@ -360,7 +360,7 @@ const AiChatAgent: React.FC = () => {
                                         <button
                                             onClick={() => handleFeedback(msg.id, 'bad')}
                                             disabled={!!msg.feedback}
-                                            className={`p-1 rounded-full transition-colors ${
+                                            className={`p-1 rounded-full transition-all active:scale-90 ${
                                                 msg.feedback === 'bad' ? 'text-red-500 bg-red-100 dark:bg-red-900/50' :
                                                 msg.feedback ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' :
                                                 'text-gray-400 hover:text-red-500'
@@ -409,7 +409,7 @@ const AiChatAgent: React.FC = () => {
                             className="w-full pl-4 pr-12 py-2 bg-gray-100 dark:bg-gray-700 rounded-full border border-transparent focus:outline-none focus:ring-2 focus:ring-accent"
                             disabled={isLoading || showConfirmation}
                         />
-                        <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 p-2 bg-accent text-white rounded-full hover:bg-opacity-80 disabled:opacity-50" disabled={!inputValue.trim() || isLoading || showConfirmation} aria-label="Send message">
+                        <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 p-2 bg-accent text-white rounded-full hover:bg-opacity-80 transition-transform active:scale-95 disabled:opacity-50" disabled={!inputValue.trim() || isLoading || showConfirmation} aria-label="Send message">
                            <SendIcon className="w-5 h-5" />
                         </button>
                     </div>

@@ -111,7 +111,7 @@ const TestimonialsPage: React.FC<TestimonialsPageProps> = ({ onScrollToSection }
         </p>
         <button
             onClick={() => onScrollToSection('contact')}
-            className="mt-8 px-8 py-4 bg-accent text-white font-bold rounded-lg shadow-lg hover:bg-opacity-80 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
+            className="mt-8 px-8 py-4 bg-accent text-white font-bold rounded-lg shadow-lg hover:bg-opacity-80 transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/50"
         >
             Share Your Experience
         </button>
