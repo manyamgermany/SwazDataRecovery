@@ -1,0 +1,5 @@
+{
+  "name": "Swaz Data Recovery Labs",
+  "description": "A responsive web application that simulates recovering lost or deleted files from storage devices. It features a drive selector, file type filtering, recovery progress status, and uses Gemini API to generate previews and summaries for 'recovered' files. Includes a dark/light mode toggle for optimal user experience.",
+  "requestFramePermissions": []
+}
