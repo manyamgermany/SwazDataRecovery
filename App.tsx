@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useTheme } from './context/ThemeContext';
 import Header from './components/Header';
-import DriveSelector from './components/DriveSelector';
+import HeroSection from './components/DriveSelector';
 import ServicesPage from './components/ServicesPage';
 import ContactPage from './components/ContactPage';
 import TestimonialsPage from './components/TestimonialsPage';
@@ -39,7 +39,7 @@ const App: React.FC = () => {
       <Header onNavigate={scrollToSection} />
       <main className="container mx-auto px-4 py-8">
         <section id="home" ref={sectionRefs.home} className="min-h-[calc(100vh-80px)] scroll-mt-20 flex items-center justify-center">
-          <DriveSelector onScrollToSection={scrollToSection} />
+          <HeroSection onScrollToSection={scrollToSection} />
         </section>
         <section id="services" ref={sectionRefs.services} className="py-16 scroll-mt-20">
           <ServicesPage onScrollToSection={scrollToSection} />

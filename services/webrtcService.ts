@@ -24,6 +24,7 @@ type ChunkMetadata = {
     fileId: string;
     chunkIndex: number;
     size: number;
+    checksum: string;
 };
 type ProtocolMessage = 
     | { type: 'file-metadata', payload: FileMetadata }
@@ -216,7 +217,14 @@ export class FileTransferManager {
         const chunkBlob = file.slice(start, end);
         const chunkData = await chunkBlob.arrayBuffer();
 
-        const chunkMetadata: ChunkMetadata = { fileId, chunkIndex, size: chunkData.byteLength };
+        const chunkChecksum = await calculateSHA256(chunkData);
+
+        const chunkMetadata: ChunkMetadata = {
+            fileId,
+            chunkIndex,
+            size: chunkData.byteLength,
+            checksum: chunkChecksum,
+        };
 
         const encryptedChunk = await this.encryptionPipeline.encrypt(chunkData);
         if (!encryptedChunk) {
@@ -320,9 +328,19 @@ export class FileTransferManager {
     }
 
     private async handleChunkData(decryptedChunkData: ArrayBuffer, metadata: ChunkMetadata) {
-        const { fileId, chunkIndex } = metadata;
+        const { fileId, chunkIndex, checksum } = metadata;
         const fileState = this.receivingFiles.get(fileId);
         if (!fileState) return;
+
+        const receivedChecksum = await calculateSHA256(decryptedChunkData);
+        if (receivedChecksum !== checksum) {
+            this.callbacks.onStatusUpdate({
+                type: 'info',
+                message: `Data corruption detected in a chunk for ${fileState.metadata.name}. It will be re-requested automatically.`,
+            });
+            console.warn(`Chunk checksum mismatch for file ${fileId}, chunk ${chunkIndex}. Expected ${checksum}, got ${receivedChecksum}. Discarding chunk.`);
+            return;
+        }
         
         if (fileState.metadata.totalChunks <= chunkIndex) {
             // This can happen if chunk size was adapted mid-transfer

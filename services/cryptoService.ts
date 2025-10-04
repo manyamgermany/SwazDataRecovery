@@ -19,7 +19,6 @@ function bufferToHex(buffer: ArrayBuffer): string {
  * @param data The File, Blob, or ArrayBuffer to hash.
  * @returns A promise that resolves with the SHA-256 hash as a hex string.
  */
-// Fix: Update function signature to accept Blob type and adjust implementation to handle it.
 export async function calculateSHA256(data: File | ArrayBuffer | Blob): Promise<string> {
   const buffer = data instanceof ArrayBuffer ? data : await data.arrayBuffer();
   try {

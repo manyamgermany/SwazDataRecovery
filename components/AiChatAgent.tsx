@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { getAiChatResponse, resetAiChatSession, ChatMessage } from '../services/geminiService';
-import { ChatBubbleIcon, CloseIcon, SendIcon, SwazLogoIcon, ThumbsUpIcon, ThumbsDownIcon, PlusIcon, TrashIcon } from './icons/Icons';
+import { ChatBubbleIcon, CloseIcon, SendIcon, SwazLogoIcon, ThumbsUpIcon, ThumbsDownIcon, PlusIcon } from './icons/Icons';
 
 interface UserDetails {
     name: string;
@@ -312,15 +312,6 @@ const AiChatAgent: React.FC = () => {
                             disabled={isLoading}
                         >
                             <PlusIcon className="w-5 h-5" />
-                        </button>
-                         <button
-                            onClick={handleResetChat}
-                            className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:bg-gray-300 dark:active:bg-gray-600"
-                            aria-label="Clear Chat History"
-                            title="Clear Chat History"
-                            disabled={isLoading}
-                        >
-                            <TrashIcon className="w-5 h-5" />
                         </button>
                         <button onClick={() => setIsOpen(false)} className="p-1 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:bg-gray-300 dark:active:bg-gray-600" aria-label="Close chat">
                             <CloseIcon className="w-6 h-6" />

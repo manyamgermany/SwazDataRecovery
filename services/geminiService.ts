@@ -1,9 +1,6 @@
 
 
 import { GoogleGenAI, Chat, FunctionDeclaration, Type } from "@google/genai";
-// Fix: Import types required for the new analyzeFileContent function.
-import { RecoveredFile, FileType } from "../types";
-import { formatBytes } from '../utils/formatters';
 
 // The API key MUST be obtained from environment variables
 const API_KEY = process.env.API_KEY;
@@ -176,38 +173,5 @@ export const getAiChatResponse = async (message: string, history: ChatMessage[],
             return { text: `I'm sorry, but I encountered an error: ${error.message}` };
         }
         return { text: "I'm sorry, but I'm unable to respond at the moment. Please try again later." };
-    }
-};
-
-// Fix: Add missing analyzeFileContent function used in PreviewModal.
-export const analyzeFileContent = async (file: RecoveredFile): Promise<string> => {
-    if (!API_KEY) {
-        return Promise.resolve("AI analysis is currently unavailable because the API key is not configured.");
-    }
-
-    try {
-        let prompt = `Analyze the following metadata for a simulated recovered file. Based on the information, provide a brief, one-sentence summary of its likely content and condition. Be creative and reassuring.
-- File Name: ${file.name}
-- File Type: ${file.type}
-- Size: ${formatBytes(file.size)}
-- Path: ${file.path}
-- Simulated Recovery Chance: ${file.recoveryChance}`;
-
-        if (file.type === FileType.Document && file.content) {
-            prompt += `\n- Content Snippet: "${file.content}"`;
-        }
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-        });
-
-        return response.text;
-    } catch (error) {
-        console.error("Error analyzing file with Gemini:", error);
-        if (error instanceof Error) {
-            return `I'm sorry, but I encountered an error during analysis: ${error.message}`;
-        }
-        return "An error occurred during AI analysis.";
     }
 };

@@ -3,11 +3,11 @@ import React from 'react';
 import { SwazLogoIcon } from './icons/Icons';
 import { AppView } from '../App';
 
-interface DriveSelectorProps {
+interface HeroSectionProps {
   onScrollToSection: (section: AppView) => void;
 }
 
-const DriveSelector: React.FC<DriveSelectorProps> = ({ onScrollToSection }) => {
+const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToSection }) => {
   return (
     <section className="animate-slide-in">
         {/* Hero Section */}
@@ -39,4 +39,4 @@ const DriveSelector: React.FC<DriveSelectorProps> = ({ onScrollToSection }) => {
   );
 };
 
-export default DriveSelector;
+export default HeroSection;
