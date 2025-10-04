@@ -8,19 +8,19 @@ interface TestimonialsPageProps {
 
 const testimonials = [
   {
-    name: 'Sarah L.',
+    name: 'Priya K.',
     role: 'Freelance Photographer',
     quote: 'I thought I lost a whole photoshoot from a corrupted SD card. Swaz Data Recovery Labs\'s simulation showed me what was possible, and it gave me the confidence to seek professional help. A true lifesaver!',
     rating: 5,
   },
   {
-    name: 'Mark T.',
+    name: 'Ananth R.',
     role: 'University Student',
     quote: 'My external hard drive with my thesis failed days before the deadline. This app helped me understand the recovery process. So grateful for this tool!',
     rating: 5,
   },
   {
-    name: 'David Chen',
+    name: 'Suresh V.',
     role: 'Small Business Owner',
     quote: 'We lost critical financial records from a server failure. The RAID recovery simulation was incredibly insightful. Highly recommend for anyone facing data loss.',
     rating: 5,

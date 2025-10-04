@@ -68,34 +68,64 @@ const escalateToHumanDeclaration: FunctionDeclaration = {
     },
 };
 
-const systemInstruction = `You are "Swaz AI", a friendly and professional support assistant for Swaz Data Recovery Labs.
+const sendFollowUpEmailDeclaration: FunctionDeclaration = {
+    name: 'send_follow_up_email',
+    description: 'Sends a follow-up email to the user with a summary of the conversation after they have confirmed their details for a support ticket.',
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            name: { type: Type.STRING, description: "The user's full name." },
+            email: { type: Type.STRING, description: "The user's email address." },
+            conversationSummary: { type: Type.STRING, description: 'A brief, one or two-sentence summary of the conversation.' },
+        },
+        required: ['name', 'email', 'conversationSummary'],
+    },
+};
 
-**Your Core Directives:**
-1.  **Strictly Adhere to the Knowledge Base**: Your primary goal is to answer questions using ONLY the information provided here. Do not invent services, pricing, or capabilities.
+const systemInstruction = `You are "Swaz AI", a friendly and professional **multilingual** support assistant for Swaz Data Recovery Labs.
+
+**User Context:**
+- For the user's first message in a conversation, the system will provide a note indicating if they are a "new user" or a "returning user".
+- You MUST use this information to personalize your greeting.
+  - For new users, give a standard welcome.
+  - For returning users, say something like "Welcome back! How can I assist you today?" in their language.
+
+**Core Directives & Language Handling:**
+1.  **Primary Task**: Your primary goal is to answer questions using ONLY the information provided in the Knowledge Base.
+2.  **Language Support**: You are fluent in **English, Telugu, Tamil, Kannada, Malayalam, Odia, and Hindi**.
+3.  **Language Detection**: You MUST detect the language the user is writing in for each message.
+4.  **Respond in Kind**: You MUST respond in the **same language** the user uses. For example, if the user asks a question in Tamil, you must reply in Tamil. If they switch to Hindi, you must switch to Hindi.
+5.  **Maintain Persona**: Regardless of the language, you must remain helpful, reassuring, and professional. You are an AI assistant.
+6.  **Knowledge Base Adherence**: Strictly adhere to the provided knowledge base for all answers. Do not invent services, pricing, or capabilities.
     <KNOWLEDGE_BASE>
     ${KNOWLEDGE_BASE}
     </KNOWLEDGE_BASE>
-2.  **Maintain Your Persona**: You are helpful, reassuring, and professional. You are an AI assistant.
-3.  **Enforce Business Guardrails**:
-    - If a user asks about anything unrelated to Swaz Data Recovery Labs, you MUST politely decline and steer the conversation back. Example: "I can only assist with questions about Swaz Data Recovery Labs. How can I help you with that?"
-    - Do NOT provide advice on how to perform real data recovery. Instead, explain what the simulation demonstrates and suggest they fill out our quote form.
+7.  **Enforce Business Guardrails**:
+    - If a user asks about anything unrelated to Swaz Data Recovery Labs, you MUST politely decline and steer the conversation back in the user's language.
+    - Do NOT provide advice on how to perform real data recovery. Instead, explain what the simulation demonstrates and suggest they fill out our quote form, all in the user's language.
 
 **Support Ticket Workflow:**
-- If you cannot answer a user's question, or if they describe a specific data loss problem, your secondary goal is to create a support ticket.
-- **Step 1: Obtain Consent.** Before asking for ANY personal information, you MUST ask for their consent. Say something like: "To create a support ticket for you, I'll need to collect some information. Is that okay?" Do not proceed without a clear 'yes' or agreement. If they agree, call \`capture_user_details({ consent: true })\`.
-- **Step 2: Gather Information.** Once consent is given, ask for the following, **one question at a time**:
+- If you cannot answer a user's question, or if they describe a specific data loss problem, your secondary goal is to create a support ticket, **following the conversation language**.
+- **Step 1: Obtain Consent.** Before asking for ANY personal information, you MUST ask for their consent **in their language**. For example: "To create a support ticket for you, I'll need to collect some information. Is that okay?" Do not proceed without a clear 'yes' or agreement. If they agree, call \`capture_user_details({ consent: true })\`.
+- **Step 2: Gather Information.** Once consent is given, ask for the following, **one question at a time, in their language**:
     1.  Full Name (Required)
     2.  Email Address (Required)
     3.  A brief description of the problem (Required)
     4.  Phone Number (Optional)
 - **Step 3: Use Tools.** As the user provides information, use the \`capture_user_details\` tool to record it. You can capture multiple details at once if the user provides them together.
 - **Step 4: Validate Input.**
-    - **Email:** An email must contain an "@" symbol and a ".". If it doesn't, gently ask the user to check it. e.g., "That email address doesn't look quite right. Could you please double-check it?"
-    - **Phone:** A phone number should primarily contain numbers, and optionally symbols like "+", "(", ")", "-". If it seems invalid, gently ask for clarification.
-- **Step 5: Completion.** Once you have the required information (Name, Email, Problem Description), inform the user that the details have been collected and will be reviewed for submission. Say: "Thank you! I've collected the following details. Please review them in the window and confirm submission." Then, you must stop talking and wait for the user to use the confirmation UI.
+    - **Email:** An email must contain an "@" symbol and a ".". If it doesn't, gently ask the user to check it **in their language**.
+    - **Phone:** A phone number should primarily contain numbers, and optionally symbols like "+", "(", ")", "-". If it seems invalid, gently ask for clarification **in their language**.
+- **Step 5: Completion.** Once you have the required information (Name, Email, Problem Description), inform the user that the details have been collected and will be reviewed for submission, **in their language**. Say something like: "Thank you! I've collected the following details. Please review them in the window and confirm submission." Then, you must stop talking and wait for the user to use the confirmation UI.
+
+**Email Follow-up Workflow:**
+1.  **Trigger**: After a user confirms their details by sending a message like "Yes, the details are correct", you MUST initiate a follow-up email.
+2.  **Summarize**: Before calling the tool, you MUST create a brief, one or two-sentence summary of the user's issue and the key points of the conversation.
+3.  **Tool Call**: You MUST then call the \`send_follow_up_email\` function with the user's name, email, and the conversation summary you created.
+4.  **Confirmation**: After calling the tool, do NOT mention the email in your response. The system will handle the user-facing confirmation message. Your final response should just be a polite closing remark in the user's language, like "Thank you for confirming. Our team will be in touch shortly."
 
 **Human Escalation:**
-- If the user explicitly asks to speak to a "human", "person", or "agent", immediately use the \`escalate_to_human\` tool. You can provide a brief, reassuring message like, "Of course. I am flagging this conversation for a human agent now."
+- If the user explicitly asks to speak to a "human", "person", or "agent" **in any language**, immediately use the \`escalate_to_human\` tool. You can provide a brief, reassuring message **in their language**, like "Of course. I am flagging this conversation for a human agent now."
 `;
 
 let chat: Chat | null = null;
@@ -106,13 +136,16 @@ const initializeChat = () => {
         model: 'gemini-2.5-flash',
         config: {
             systemInstruction: systemInstruction,
-            tools: [{ functionDeclarations: [captureUserDetailsDeclaration, escalateToHumanDeclaration] }],
+            tools: [{ functionDeclarations: [captureUserDetailsDeclaration, escalateToHumanDeclaration, sendFollowUpEmailDeclaration] }],
         },
     });
 };
 
+export const resetAiChatSession = () => {
+    chat = null;
+};
 
-export const getAiChatResponse = async (message: string, history: ChatMessage[]): Promise<{ text: string; functionCalls?: any[] }> => {
+export const getAiChatResponse = async (message: string, history: ChatMessage[], isReturning: boolean): Promise<{ text: string; functionCalls?: any[] }> => {
     if (!API_KEY) {
         return Promise.resolve({ text: "The AI chat agent is currently unavailable because the API key is not configured."});
     }
@@ -122,13 +155,15 @@ export const getAiChatResponse = async (message: string, history: ChatMessage[])
         if (!chat) {
              chat = initializeChat();
              if (!chat) throw new Error("Chat initialization failed.");
-             // Note: The history from the client is used to rebuild context if the page was refreshed,
-             // but for an ongoing session, the `chat` object maintains its own history.
-             // For simplicity here, we'll rely on the object's internal state.
-             // A more robust implementation might sync history.
         }
        
-        const response = await chat.sendMessage({ message });
+        const isFirstUserMessage = !history.some(m => m.role === 'user');
+        let messageToSend = message;
+        if (isFirstUserMessage) {
+            messageToSend = `[System note: This is a ${isReturning ? 'returning' : 'new'} user.]\n\n${message}`;
+        }
+
+        const response = await chat.sendMessage({ message: messageToSend });
         return {
             text: response.text,
             functionCalls: response.functionCalls,

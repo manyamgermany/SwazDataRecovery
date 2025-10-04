@@ -6,63 +6,58 @@ interface ServicesPageProps {
   onScrollToSection: (section: AppView) => void;
 }
 
-const services = [
-  {
-    icon: <HddIcon className="w-12 h-12 mb-4 text-primary-light" />,
-    title: 'Hard Drive Recovery',
-    description: 'We specialize in recovering data from all types of internal and external hard drives (HDDs) regardless of the cause of failure.',
-  },
-  {
-    icon: <SsdIcon className="w-12 h-12 mb-4 text-primary-light" />,
-    title: 'SSD Recovery',
-    description: 'Our advanced techniques allow for high success rates in data recovery from solid-state drives (SSDs) that are failing or corrupted.',
-  },
-  {
-    icon: <UsbIcon className="w-12 h-12 mb-4 text-primary-light" />,
-    title: 'USB & Flash Drive Recovery',
-    description: 'Recover your important files from damaged, formatted, or inaccessible USB flash drives, SD cards, and other memory devices.',
-  },
-  {
-    icon: <RaidIcon className="w-12 h-12 mb-4 text-primary-light" />,
-    title: 'RAID Recovery',
-    description: 'Complex RAID array failures require expert handling. We can recover data from all RAID levels (RAID 0, 1, 5, 6, 10).',
-  },
-  {
-    icon: <MobileIcon className="w-12 h-12 mb-4 text-primary-light" />,
-    title: 'Mobile Device Recovery',
-    description: 'Lost photos, contacts, or messages? We provide recovery services for smartphones and tablets across various operating systems.',
-  },
-    {
-    icon: <SwazLogoIcon className="w-12 h-12 mb-4 text-primary-light" />,
-    title: 'Secure & Confidential',
-    description: 'Your privacy is our priority. We ensure a secure data recovery process from start to finish with strict confidentiality protocols.',
-  },
-];
-
-const processSteps = [
-  {
-    step: '01',
-    title: 'Evaluation & Diagnosis',
-    description: 'Our simulation begins with a free, no-obligation evaluation. Simply select your drive to start the diagnostic scan.',
-  },
-  {
-    step: '02',
-    title: 'Secure Data Recovery',
-    description: 'Using cutting-edge simulated algorithms, we perform a deep scan to locate and piece together your recoverable files.',
-  },
-  {
-    step: '03',
-    title: 'File Verification',
-    description: 'After the scan, you can preview the recovered files to verify their integrity before proceeding with the final recovery.',
-  },
-  {
-    step: '04',
-    title: 'Data Return',
-    description: 'Select the files you need, and our tool will securely "recover" them, completing the process and restoring your data.',
-  },
-];
-
 const ServicesPage: React.FC<ServicesPageProps> = ({ onScrollToSection }) => {
+    const services = [
+      {
+        icon: <HddIcon className="w-12 h-12 mb-4 text-primary-light" />,
+        title: 'Hard Drive Recovery',
+        description: 'We specialize in recovering data from all types of internal and external hard drives (HDDs) regardless of the cause of failure.',
+      },
+      {
+        icon: <SsdIcon className="w-12 h-12 mb-4 text-primary-light" />,
+        title: 'SSD Recovery',
+        description: 'Our advanced techniques allow for high success rates in data recovery from solid-state drives (SSDs) that are failing or corrupted.',
+      },
+      {
+        icon: <UsbIcon className="w-12 h-12 mb-4 text-primary-light" />,
+        title: 'USB & Flash Drive Recovery',
+        description: 'Recover your important files from damaged, formatted, or inaccessible USB flash drives, SD cards, and other memory devices.',
+      },
+      {
+        icon: <RaidIcon className="w-12 h-12 mb-4 text-primary-light" />,
+        title: 'RAID Recovery',
+        description: 'Complex RAID array failures require expert handling. We can recover data from all RAID levels (RAID 0, 1, 5, 6, 10).',
+      },
+      {
+        icon: <MobileIcon className="w-12 h-12 mb-4 text-primary-light" />,
+        title: 'Mobile Device Recovery',
+        description: 'Lost photos, contacts, or messages? We provide recovery services for smartphones and tablets across various operating systems.',
+      },
+    ];
+
+    const processSteps = [
+      {
+        step: '01',
+        title: 'Evaluation & Diagnosis',
+        description: 'Our simulation begins with a free, no-obligation evaluation. Simply select your drive to start the diagnostic scan.',
+      },
+      {
+        step: '02',
+        title: 'Secure Data Recovery',
+        description: 'Using cutting-edge simulated algorithms, we perform a deep scan to locate and piece together your recoverable files.',
+      },
+      {
+        step: '03',
+        title: 'File Verification',
+        description: 'After the scan, you can preview the recovered files to verify their integrity before proceeding with the final recovery.',
+      },
+      {
+        step: '04',
+        title: 'Data Return',
+        description: 'Select the files you need, and our tool will securely "recover" them, completing the process and restoring your data.',
+      },
+    ];
+
   return (
     <div className="animate-slide-in space-y-24">
       {/* Services Section */}
@@ -78,7 +73,8 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onScrollToSection }) => {
             <div key={index} className="p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 flex flex-col items-center text-center">
               {service.icon}
               <h3 className="text-xl font-bold mb-2 text-text-light dark:text-text-dark">{service.title}</h3>
-              <p className="text-gray-600 dark:text-gray-400">{service.description}</p>
+              <p className="text-gray-600 dark:text-gray-400 flex-grow mb-4">{service.description}</p>
+              {/* Fix: Removed button that referenced a non-existent 'cta' property on the service object. */}
             </div>
           ))}
         </div>

@@ -25,6 +25,27 @@ const faqData = [
     ],
   },
   {
+    category: 'P2P File Transfer',
+    questions: [
+        {
+            q: 'How does the P2P file transfer work?',
+            a: 'It uses a technology called WebRTC to create a direct, secure connection between your browser and the receiver\'s browser. Your files are sent straight from your device to theirs without ever being uploaded to a central server, ensuring privacy and speed.',
+        },
+        {
+            q: 'Is the file transfer secure?',
+            a: 'Yes, it is highly secure. The connection is end-to-end encrypted using the latest standards (ECDH for key exchange and AES-256-GCM for data encryption). This means only you and the person you are sending files to can decrypt and view them.',
+        },
+        {
+            q: 'My connection is failing or the transfer is stuck. What should I do?',
+            a: 'Connection issues are often caused by restrictive network firewalls (like at a school or office) that can block direct P2P connections. Try using a different network. Also, ensure both you and your peer have a stable internet connection and are using a modern browser like Chrome or Firefox.',
+        },
+        {
+            q: 'Is there a limit to the file size I can send?',
+            a: 'There are no hard limits on file size. Our system streams files in small, encrypted chunks, which means even very large files can be transferred without overloading your computer\'s memory. The main limitation is the stability and speed of your internet connection.',
+        },
+    ]
+  },
+  {
     category: 'Technical Questions',
     questions: [
         {
@@ -42,7 +63,7 @@ const faqData = [
     questions: [
         {
             q: 'Do I need to pay for this service?',
-            a: 'No, this is a free simulation tool. There are no charges or fees associated with using the Swaz Data Recovery Labs application.',
+            a: 'No. Both the data recovery simulation and the secure P2P file transfer service are completely free to use. There are no hidden charges or fees.',
         },
         {
             q: 'How is my data security handled?',
@@ -53,9 +74,9 @@ const faqData = [
 ];
 
 const resources = [
-    { title: 'Guide: 5 Steps to Take Immediately After Data Loss', link: '#' },
-    { title: 'Article: Understanding the Difference Between HDD and SSD Failure', link: '#' },
-    { title: 'Best Practices for Backing Up Your Important Files', link: '#' },
+    { title: 'Guide: 5 Steps to Take Immediately After Data Loss', id: 'data-loss-steps' },
+    { title: 'Article: Understanding the Difference Between HDD and SSD Failure', id: 'hdd-vs-ssd' },
+    { title: 'Best Practices for Backing Up Your Important Files', id: 'backup-best-practices' },
 ];
 
 const FaqItem: React.FC<{ question: string; answer: string; isOpen: boolean; onClick: () => void }> = ({ question, answer, isOpen, onClick }) => {
@@ -95,6 +116,14 @@ const FaqPage: React.FC<FaqPageProps> = ({ onScrollToSection }) => {
   
   const slugify = (text: string) => text.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-').replace(/[^\w-]+/g, '');
 
+  const handleResourceClick = (resourceId: string) => {
+    // We need to navigate to the resources page first, then scroll.
+    onScrollToSection('resources');
+    // Use a timeout to allow the page to scroll to the section first, then to the element.
+    setTimeout(() => {
+        document.getElementById(resourceId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 500); // 500ms delay, adjust if needed
+  };
 
   return (
     <div className="animate-slide-in space-y-16">
@@ -180,10 +209,14 @@ const FaqPage: React.FC<FaqPageProps> = ({ onScrollToSection }) => {
             <h2 className="text-3xl font-bold mb-8 text-center text-text-light dark:text-text-dark">Helpful Resources</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {resources.map((resource, index) => (
-                    <a href={resource.link} key={index} className="block p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-transform duration-300">
+                     <button 
+                        onClick={() => handleResourceClick(resource.id)} 
+                        key={index} 
+                        className="block p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-transform duration-300 text-left"
+                    >
                         <DocumentIcon className="w-8 h-8 mb-3 text-accent" />
                         <h3 className="font-semibold text-text-light dark:text-text-dark">{resource.title}</h3>
-                    </a>
+                    </button>
                 ))}
             </div>
         </section>

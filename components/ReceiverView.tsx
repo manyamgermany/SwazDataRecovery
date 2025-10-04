@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileProgress, ReceivedFile, TransferStatus } from '../services/webrtcService';
-import { ShieldCheckIcon, LinkIcon, DocumentIcon, ImageIcon, VideoIcon, AudioIcon } from './icons/Icons';
+import { ShieldCheckIcon, LinkIcon, DocumentIcon, ImageIcon, VideoIcon, AudioIcon, ClockIcon } from './icons/Icons';
 import { formatBytes } from '../utils/formatters';
 
 interface ReceiverViewProps {
@@ -9,7 +9,43 @@ interface ReceiverViewProps {
     receivedFiles: ReceivedFile[];
     status: TransferStatus;
     onCancelTransfer: () => void;
+    scheduledTime: number | null;
 }
+
+const Countdown: React.FC<{ to: number }> = ({ to }) => {
+    const [timeLeft, setTimeLeft] = useState(to - Date.now());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const remaining = to - Date.now();
+            if (remaining <= 0) {
+                clearInterval(timer);
+            }
+            setTimeLeft(remaining);
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [to]);
+
+    if (timeLeft <= 0) {
+        return <p className="text-xl font-semibold text-accent mt-2">Waiting for sender to start...</p>;
+    }
+
+    const seconds = Math.floor((timeLeft / 1000) % 60);
+    const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
+    const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+
+    return (
+        <div className="flex items-baseline justify-center gap-2">
+             <span className="text-3xl font-bold text-accent">
+                {days > 0 && `${days}d `}
+                {hours.toString().padStart(2, '0')}:
+                {minutes.toString().padStart(2, '0')}:
+                {seconds.toString().padStart(2, '0')}
+            </span>
+        </div>
+    );
+};
 
 const getFileTypeIcon = (mimeType: string) => {
     const commonClasses = "w-8 h-8 flex-shrink-0 text-accent";
@@ -52,11 +88,34 @@ const ReceivingFileProgressItem: React.FC<{progress: FileProgress}> = ({ progres
 };
 
 const ReceiverView: React.FC<ReceiverViewProps> = ({
-    peerConnected, progress, receivedFiles, onCancelTransfer
+    peerConnected, progress, receivedFiles, onCancelTransfer, scheduledTime
 }) => {
 
     const filesInProgress = Object.values(progress);
     const completedFilesMap = new Map(receivedFiles.map(f => [f.name, f]));
+
+    if (scheduledTime && Date.now() < scheduledTime && filesInProgress.length === 0) {
+        return (
+            <div className="w-full max-w-2xl text-center">
+                 <div className="p-8 bg-gray-100 dark:bg-gray-900 rounded-xl">
+                    <ClockIcon className="w-16 h-16 text-accent mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold">Waiting for Scheduled Transfer</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mt-2 mb-4">
+                        The transfer is scheduled to begin in:
+                    </p>
+                    <Countdown to={scheduledTime} />
+                    <p className="text-sm text-gray-500 mt-2">
+                        Please keep this page open. The transfer will start automatically.
+                    </p>
+                     <div className="mt-6">
+                        <button onClick={onCancelTransfer} className="px-6 py-3 bg-gray-500 text-white font-bold rounded-lg shadow-md hover:bg-gray-600">
+                           Cancel
+                        </button>
+                    </div>
+                 </div>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-2xl text-center">

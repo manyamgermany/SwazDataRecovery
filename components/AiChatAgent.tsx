@@ -1,8 +1,8 @@
 
 
 import React, { useState, useEffect, useRef } from 'react';
-import { getAiChatResponse, ChatMessage } from '../services/geminiService';
-import { ChatBubbleIcon, CloseIcon, SendIcon, SwazLogoIcon, ThumbsUpIcon, ThumbsDownIcon } from './icons/Icons';
+import { getAiChatResponse, resetAiChatSession, ChatMessage } from '../services/geminiService';
+import { ChatBubbleIcon, CloseIcon, SendIcon, SwazLogoIcon, ThumbsUpIcon, ThumbsDownIcon, PlusIcon, TrashIcon } from './icons/Icons';
 
 interface UserDetails {
     name: string;
@@ -26,6 +26,16 @@ type Message = {
     sender: 'user' | 'ai' | 'system';
     feedback?: 'good' | 'bad' | null;
 }
+
+const initialMessage: Message = { 
+    id: 1, 
+    text: "Hello! I'm Swaz AI. You can chat with me in English, Telugu, Tamil, Kannada, Malayalam, Odia, or Hindi. How can I help you today?", 
+    sender: 'ai' 
+};
+
+const CHAT_MESSAGES_KEY = 'swaz-chat-messages';
+const USER_DETAILS_KEY = 'swaz-chat-userDetails';
+const INTERACTION_FLAG_KEY = 'swaz-chat-hasInteracted';
 
 const ConfirmationForm: React.FC<{ details: UserDetails; onSubmit: () => void; onEdit: () => void }> = ({ details, onSubmit, onEdit }) => {
     const detailItems = [
@@ -61,9 +71,20 @@ const ConfirmationForm: React.FC<{ details: UserDetails; onSubmit: () => void; o
 
 const AiChatAgent: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState<Message[]>([
-        { id: 1, text: "Hello! I'm Swaz AI. How can I assist you with the Swaz Data Recovery Labs simulation today?", sender: 'ai' }
-    ]);
+    const [messages, setMessages] = useState<Message[]>(() => {
+        try {
+            const savedMessages = localStorage.getItem(CHAT_MESSAGES_KEY);
+            if (savedMessages) {
+                const parsed = JSON.parse(savedMessages);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load messages from localStorage", e);
+        }
+        return [initialMessage];
+    });
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [feedbackConfirmationId, setFeedbackConfirmationId] = useState<number | null>(null);
@@ -71,6 +92,7 @@ const AiChatAgent: React.FC = () => {
 
     const [userDetails, setUserDetails] = useState<UserDetails>(initialUserDetails);
     const [showConfirmation, setShowConfirmation] = useState(false);
+    const [isReturningUser, setIsReturningUser] = useState(false);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -81,22 +103,37 @@ const AiChatAgent: React.FC = () => {
     }, [messages, isLoading, showConfirmation]);
 
     useEffect(() => {
+        localStorage.setItem(CHAT_MESSAGES_KEY, JSON.stringify(messages));
+    }, [messages]);
+
+    useEffect(() => {
+        // More robust check for a returning user
+        const hasInteracted = localStorage.getItem(INTERACTION_FLAG_KEY) === 'true';
+        // Check for more than just the initial welcome message
+        const hasHistory = messages.length > 1;
+
+        if (hasInteracted || hasHistory) {
+            setIsReturningUser(true);
+        }
+
+        // Also attempt to load any saved user details from a previous session
         try {
-            const savedDetails = localStorage.getItem('swaz-chat-userDetails');
+            const savedDetails = localStorage.getItem(USER_DETAILS_KEY);
             if (savedDetails) {
                 const parsed = JSON.parse(savedDetails);
-                if (typeof parsed.name === 'string') {
-                     setUserDetails(parsed);
+                if (parsed && typeof parsed.name === 'string' && parsed.name) {
+                    setUserDetails(parsed);
                 }
             }
         } catch (e) {
             console.error("Failed to load user details from localStorage", e);
         }
-    }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run only once on mount. Messages are already loaded from storage.
 
     useEffect(() => {
         if(userDetails !== initialUserDetails) {
-            localStorage.setItem('swaz-chat-userDetails', JSON.stringify(userDetails));
+            localStorage.setItem(USER_DETAILS_KEY, JSON.stringify(userDetails));
         }
     }, [userDetails]);
 
@@ -116,6 +153,11 @@ const AiChatAgent: React.FC = () => {
         const textToSend = overrideMessage || inputValue.trim();
         if (!textToSend || isLoading) return;
 
+        // Set the interaction flag if it's not already set
+        if (!localStorage.getItem(INTERACTION_FLAG_KEY)) {
+            localStorage.setItem(INTERACTION_FLAG_KEY, 'true');
+        }
+
         const userMessage: Message = { id: Date.now(), text: textToSend, sender: 'user' };
         setMessages(prev => [...prev, userMessage]);
         setInputValue('');
@@ -128,7 +170,7 @@ const AiChatAgent: React.FC = () => {
         }));
 
         try {
-            const { text, functionCalls } = await getAiChatResponse(textToSend, history);
+            const { text, functionCalls } = await getAiChatResponse(textToSend, history, isReturningUser);
 
             if (functionCalls && functionCalls.length > 0) {
                 let detailsChanged = false;
@@ -148,6 +190,23 @@ const AiChatAgent: React.FC = () => {
                         const escalationMessage: Message = { id: Date.now() + 2, text: "A human agent will be with you shortly. Please stand by.", sender: 'system' };
                         setMessages(prev => [...prev, escalationMessage]);
                         console.log("ESCALATION REQUESTED:", funcCall.args.reason);
+                    }
+                    if (funcCall.name === 'send_follow_up_email') {
+                        const { name, email, conversationSummary } = funcCall.args;
+                        console.log("--- SIMULATING FOLLOW-UP EMAIL ---");
+                        console.log(JSON.stringify({
+                            to: email,
+                            from: 'support@swazdatarecovery.sim',
+                            subject: `Follow-up on your inquiry with Swaz Data Recovery Labs`,
+                            body: `Dear ${name},\n\nThank you for contacting Swaz Data Recovery Labs. This is a confirmation that we have received your details.\n\nHere is a summary of our conversation:\n"${conversationSummary}"\n\nA support agent will review your case and get back to you shortly.\n\nCustomer Status: ${isReturningUser ? 'Returning' : 'New'}\n\nBest regards,\nThe Swaz Data Recovery Team`
+                        }, null, 2));
+
+                        const emailConfirmationMessage: Message = { 
+                            id: Date.now() + 2, 
+                            text: `A follow-up email with a summary of our conversation has been sent to ${email}.`, 
+                            sender: 'system' 
+                        };
+                        setMessages(prev => [...prev, emailConfirmationMessage]);
                     }
                 }
     
@@ -178,20 +237,18 @@ const AiChatAgent: React.FC = () => {
             timestamp: new Date().toISOString()
         }, null, 2));
     
-        const successMessage: Message = { id: Date.now(), text: "Thank you! Your inquiry has been submitted. Our support team will contact you at your provided email address shortly.", sender: 'system' };
-        setMessages(prev => [...prev, successMessage]);
-    
         setShowConfirmation(false);
         setUserDetails(initialUserDetails);
-        localStorage.removeItem('swaz-chat-userDetails');
+        localStorage.removeItem(USER_DETAILS_KEY);
+
+        const confirmationText = "Yes, the details are correct. Please submit the ticket.";
+        handleSendMessage({ preventDefault: () => {} } as React.FormEvent, confirmationText);
     };
 
     const handleEditInquiry = () => {
         setShowConfirmation(false);
         const editRequestText = "I need to change some of my details.";
         
-        // Pass a synthetic event object to satisfy the function signature.
-        // The override message is what's actually used.
         handleSendMessage({ preventDefault: () => {} } as React.FormEvent, editRequestText);
     }
     
@@ -216,6 +273,17 @@ const AiChatAgent: React.FC = () => {
         }, null, 2));
     };
 
+    const handleResetChat = () => {
+        resetAiChatSession();
+        setMessages([initialMessage]);
+        setUserDetails(initialUserDetails);
+        localStorage.removeItem(USER_DETAILS_KEY);
+        localStorage.removeItem(INTERACTION_FLAG_KEY);
+        setIsReturningUser(false);
+        setShowConfirmation(false);
+        setIsLoading(false);
+    };
+
     return (
         <>
             {/* Floating Action Button */}
@@ -235,9 +303,29 @@ const AiChatAgent: React.FC = () => {
                         <SwazLogoIcon className="w-6 h-6 text-primary-light" />
                         <h2 className="font-bold text-lg text-text-light dark:text-text-dark">Swaz AI Assistant</h2>
                     </div>
-                    <button onClick={() => setIsOpen(false)} className="p-1 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Close chat">
-                        <CloseIcon className="w-6 h-6" />
-                    </button>
+                    <div className="flex items-center space-x-1">
+                        <button
+                            onClick={handleResetChat}
+                            className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
+                            aria-label="Start New Chat"
+                            title="Start New Chat"
+                            disabled={isLoading}
+                        >
+                            <PlusIcon className="w-5 h-5" />
+                        </button>
+                         <button
+                            onClick={handleResetChat}
+                            className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
+                            aria-label="Clear Chat History"
+                            title="Clear Chat History"
+                            disabled={isLoading}
+                        >
+                            <TrashIcon className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => setIsOpen(false)} className="p-1 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Close chat">
+                            <CloseIcon className="w-6 h-6" />
+                        </button>
+                    </div>
                 </header>
 
                 {/* Message List */}

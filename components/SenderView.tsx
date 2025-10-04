@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { FileProgress, TransferStatus } from '../services/webrtcService';
 import { TransferState } from './FileTransferPage';
 import { formatBytes } from '../utils/formatters';
@@ -6,8 +6,6 @@ import {
     UploadCloudIcon, 
     DocumentIcon, 
     XCircleIcon, 
-    CopyIcon, 
-    CheckIcon, 
     ShieldCheckIcon, 
     PauseIcon, 
     PlayIcon, 
@@ -18,7 +16,8 @@ import {
     CalendarIcon,
     TrashIcon,
     CloseIcon,
-    QrCodeIcon,
+    ShareIcon,
+    ClockIcon,
 } from './icons/Icons';
 import TransferProgress from './TransferProgress';
 import { P2PTransferModal } from './P2PTransferModal';
@@ -107,11 +106,8 @@ const FileDropzone: React.FC<{onFilesSelected: (files: File[]) => void}> = ({ on
         const droppedFiles: File[] = [];
         const promises: Promise<File | File[] | null>[] = [];
     
-        // dataTransfer.items is the modern API, check for it
         if (e.dataTransfer.items) {
              for (const item of e.dataTransfer.items) {
-                // webkitGetAsEntry() is non-standard but the only way to get folder drag-and-drop.
-                // It is supported in Chrome and Edge. We check for its existence for cross-browser safety.
                 if (typeof item.webkitGetAsEntry === 'function') {
                     const entry = item.webkitGetAsEntry();
                     if (entry) {
@@ -122,8 +118,6 @@ const FileDropzone: React.FC<{onFilesSelected: (files: File[]) => void}> = ({ on
                         }
                     }
                 } else {
-                    // Fallback for Firefox and other browsers that support .items but not .webkitGetAsEntry.
-                    // This will handle file drops correctly.
                     const file = item.getAsFile();
                     if (file) {
                         promises.push(Promise.resolve(file));
@@ -133,7 +127,6 @@ const FileDropzone: React.FC<{onFilesSelected: (files: File[]) => void}> = ({ on
             const results = await Promise.all(promises);
             results.flat().forEach(file => file && droppedFiles.push(file as File));
         } else {
-            // Fallback for older browsers that only support e.dataTransfer.files
              droppedFiles.push(...Array.from(e.dataTransfer.files));
         }
         
@@ -148,7 +141,6 @@ const FileDropzone: React.FC<{onFilesSelected: (files: File[]) => void}> = ({ on
         }
     };
     
-    // Add webkitdirectory attribute to allow folder selection
     const handleFolderSelect = () => {
         if (fileInputRef.current) {
             fileInputRef.current.setAttribute('webkitdirectory', 'true');
@@ -259,15 +251,50 @@ const FileProgressItem: React.FC<{file: File, progress: FileProgress | undefined
     );
 };
 
+const Countdown: React.FC<{ to: number }> = ({ to }) => {
+    const [timeLeft, setTimeLeft] = useState(to - Date.now());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setTimeLeft(to - Date.now());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [to]);
+
+    if (timeLeft <= 0) {
+        return <span className="text-2xl font-bold text-accent">Starting now...</span>;
+    }
+
+    const seconds = Math.floor((timeLeft / 1000) % 60);
+    const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
+    const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+
+    return (
+        <div className="flex items-baseline justify-center gap-2">
+             <span className="text-4xl font-bold text-accent">
+                {days > 0 && `${days}d `}
+                {hours.toString().padStart(2, '0')}:
+                {minutes.toString().padStart(2, '0')}:
+                {seconds.toString().padStart(2, '0')}
+            </span>
+        </div>
+    );
+};
 
 const SenderView: React.FC<SenderViewProps> = ({
     roomId, peerConnected, onStartTransfer, onScheduleTransfer, onPauseTransfer, onResumeTransfer, onCancelTransfer, onCancelSchedule,
     files, progress, transferState, transferSpeed, averageSpeed, eta, scheduledTime, speedData
 }) => {
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-    const [isCopied, setIsCopied] = useState(false);
     const [isScheduling, setIsScheduling] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+    useEffect(() => {
+        if (files.length > 0 && selectedFiles.length === 0 && (transferState !== 'idle')) {
+            setSelectedFiles(files);
+        }
+    }, [files, selectedFiles, transferState]);
 
     const handleFilesSelected = useCallback((newFiles: File[]) => {
         const uniqueNewFiles = newFiles.filter(newFile => 
@@ -299,14 +326,19 @@ const SenderView: React.FC<SenderViewProps> = ({
         setIsScheduling(false);
     };
 
-    const shareableLink = `${window.location.origin}${window.location.pathname}?join=${roomId}`;
+    const shareableLink = useMemo(() => {
+        const baseUrl = `${window.location.origin}${window.location.pathname}`;
+        const params = new URLSearchParams();
+        if (roomId) params.set('join', roomId);
+        if (transferState === 'scheduled' && scheduledTime) params.set('at', scheduledTime.toString());
+        return `${baseUrl}?${params.toString()}`;
+    }, [roomId, scheduledTime, transferState]);
 
-    const handleCopyToClipboard = () => {
-        if (!roomId) return;
-        navigator.clipboard.writeText(shareableLink);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
-    };
+    useEffect(() => {
+        if (roomId && !peerConnected && transferState !== 'scheduled') {
+            setIsShareModalOpen(true);
+        }
+    }, [roomId, peerConnected, transferState]);
     
     const totalSize = useMemo(() => files.reduce((sum, f) => sum + f.size, 0), [files]);
     const totalSelectedSize = useMemo(() => selectedFiles.reduce((sum, f) => sum + f.size, 0), [selectedFiles]);
@@ -371,6 +403,33 @@ const SenderView: React.FC<SenderViewProps> = ({
         );
     }
 
+    if (transferState === 'scheduled') {
+        return (
+            <div className="w-full max-w-2xl text-center">
+                 {isShareModalOpen && roomId && <P2PTransferModal shareableLink={shareableLink} onClose={() => setIsShareModalOpen(false)} />}
+                 <div className="p-8 bg-gray-100 dark:bg-gray-900 rounded-xl">
+                    <ClockIcon className="w-16 h-16 text-accent mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold">Transfer Scheduled</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mt-2 mb-4">
+                        The transfer of {files.length} file(s) ({formatBytes(totalSize)}) will begin automatically in:
+                    </p>
+                    {scheduledTime && <Countdown to={scheduledTime} />}
+                    <p className="text-sm text-gray-500 mt-2">
+                        Your peer must join the room before the countdown ends.
+                    </p>
+                     <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
+                         <button onClick={() => setIsShareModalOpen(true)} className="px-6 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2">
+                            <ShareIcon className="w-5 h-5" /> Share Link
+                        </button>
+                        <button onClick={onCancelSchedule} className="px-6 py-3 bg-red-500 text-white font-bold rounded-lg shadow-md hover:bg-red-600">
+                           Cancel Schedule
+                        </button>
+                    </div>
+                 </div>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full max-w-2xl text-center">
             {isShareModalOpen && roomId && <P2PTransferModal shareableLink={shareableLink} onClose={() => setIsShareModalOpen(false)} />}
@@ -381,33 +440,17 @@ const SenderView: React.FC<SenderViewProps> = ({
             
             {!peerConnected && roomId && (
                  <div className="mb-6 p-4 bg-gray-100 dark:bg-gray-900 rounded-lg">
-                    <p className="text-gray-600 dark:text-gray-400 mb-3">Share this link with the receiver:</p>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                        <input 
-                            type="text" 
-                            readOnly 
-                            value={shareableLink} 
-                            className="w-full flex-grow px-3 py-2 bg-white dark:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 text-sm truncate"
-                        />
-                         <button onClick={handleCopyToClipboard} className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-accent text-white font-semibold rounded-lg hover:bg-opacity-80 transition-colors">
-                           {isCopied ? <CheckIcon className="w-5 h-5" /> : <CopyIcon className="w-5 h-5" />}
-                           {isCopied ? 'Copied!' : 'Copy Link'}
-                        </button>
-                        <button onClick={() => setIsShareModalOpen(true)} className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors">
-                           <QrCodeIcon className="w-5 h-5" />
-                           Show QR
-                        </button>
-                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 mb-3">A secure room has been created. Invite your peer to begin the transfer.</p>
+                    <button 
+                        onClick={() => setIsShareModalOpen(true)} 
+                        className="w-full sm:w-auto px-6 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2 mx-auto"
+                    >
+                       <ShareIcon className="w-5 h-5" />
+                       Generate & Share Link
+                    </button>
                 </div>
             )}
             
-            {scheduledTime && (
-                <div className="p-3 bg-blue-500/10 text-blue-700 dark:text-blue-300 rounded-lg mb-4 text-center">
-                    <p className="font-semibold">Transfer scheduled for {new Date(scheduledTime).toLocaleString()}</p>
-                    <button onClick={onCancelSchedule} className="text-sm underline hover:text-blue-500">Cancel Schedule</button>
-                </div>
-            )}
-
             <TransferProgress
                 fileName="Overall Progress"
                 transferredBytes={totalTransferred}

@@ -7,6 +7,7 @@ import ReceiverView from './ReceiverView';
 import { LinkIcon, ShareIcon } from './icons/Icons';
 import { TransferHistoryEntry } from '../types';
 import { getHistory, addHistoryEntry, clearHistory } from '../utils/history';
+import { saveScheduledJob, getScheduledJob, clearScheduledJob } from '../utils/scheduledTransferDB';
 import TransferHistory from './TransferHistory';
 import ErrorNotificationModal from './ErrorNotificationModal';
 
@@ -25,7 +26,7 @@ const ICE_SERVERS = { iceServers: [
     { urls: 'stun:stun2.l.google.com:19302' },
 ]};
 
-export type TransferState = 'idle' | 'connecting' | 'transferring' | 'paused' | 'done' | 'error';
+export type TransferState = 'idle' | 'connecting' | 'scheduled' | 'transferring' | 'paused' | 'done' | 'error';
 type View = 'initial' | 'host' | 'receiver';
 
 const FileTransferPage: React.FC = () => {
@@ -63,12 +64,57 @@ const FileTransferPage: React.FC = () => {
         peerConnectedRef.current = peerConnected;
     }, [peerConnected]);
     
+    // Effect to check for persisted scheduled jobs on load
+    useEffect(() => {
+        const checkForScheduledJob = async () => {
+            const job = await getScheduledJob();
+            if (job) {
+                const { files, scheduledTime: time, roomId: savedRoomId } = job;
+                const now = Date.now();
+                const timeRemaining = time - now;
+
+                // If a job is scheduled for more than 5 minutes ago, consider it missed.
+                if (timeRemaining < -5 * 60 * 1000) {
+                    setStatusInternal({ type: 'error', message: `A scheduled transfer for ${new Date(time).toLocaleString()} was missed.` });
+                    await clearScheduledJob();
+                    return;
+                }
+
+                setStatusInternal({ type: 'info', message: 'Found a pending scheduled transfer.' });
+                setFilesToSend(files);
+                setScheduledTime(time);
+                setRoomId(savedRoomId);
+                setView('host');
+                
+                // Re-arm the schedule
+                initializeModules();
+                connectWebSocket(() => sendMessage('join-room', { roomId: savedRoomId }));
+                setTransferState('scheduled');
+                
+                // If the time is in the past (but within the 5min grace period), it means the browser was closed.
+                // We don't start immediately, but wait for the peer to connect. The peer connection logic will trigger the start.
+                if (timeRemaining > 0) {
+                     scheduleTimerId.current = window.setTimeout(startScheduledTransfer, timeRemaining);
+                }
+            }
+        };
+        checkForScheduledJob();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // Effect to handle joining a room via URL parameter
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const roomIdFromUrl = urlParams.get('join');
+        const timeFromUrl = urlParams.get('at');
         if (roomIdFromUrl) {
             setJoinRoomId(roomIdFromUrl);
+            if (timeFromUrl) {
+                const scheduledTimeMs = parseInt(timeFromUrl, 10);
+                if (scheduledTimeMs > Date.now()) {
+                    setScheduledTime(scheduledTimeMs);
+                }
+            }
             // Automatically trigger the join process
             handleStartReceiving(roomIdFromUrl);
             // Optional: remove the query parameter from the URL
@@ -157,7 +203,6 @@ const FileTransferPage: React.FC = () => {
     
         const { code, context, message } = newStatus;
         
-        // Helper to get a descriptive name for the file that caused the error.
         const getFileDisplayNameForError = (ctx: typeof context): string => {
             if (ctx?.fileName) return `"${ctx.fileName}"`;
             if (ctx?.fileId) {
@@ -165,7 +210,6 @@ const FileTransferPage: React.FC = () => {
                 if (progressEntry?.fileName) {
                     return `"${progressEntry.fileName}"`;
                 }
-                // Fallback if name not found yet, provides a useful debug reference.
                 return `an unknown file (ID: ${ctx.fileId.substring(0, 8)}...)`;
             }
             return 'a file';
@@ -254,7 +298,10 @@ const FileTransferPage: React.FC = () => {
                 setPeerConnected(connected);
                 if (connected) {
                      setStatusInternal({ type: 'success', message: 'Peer connection established!' });
-                     if (isSender.current && filesToSend.length > 0 && !scheduledTime) {
+                     // If a schedule was set and the time has passed, start the transfer now that peer is connected.
+                     if (isSender.current && scheduledTime && Date.now() >= scheduledTime) {
+                         startScheduledTransfer();
+                     } else if (isSender.current && filesToSend.length > 0 && !scheduledTime) {
                         setTransferState('transferring');
                         fileManager.current?.sendFiles(filesToSend);
                      }
@@ -301,7 +348,15 @@ const FileTransferPage: React.FC = () => {
         }
 
         switch (data.type) {
-            case 'room-joined': setRoomId(data.payload.roomId); break;
+            case 'room-joined':
+                const newRoomId = data.payload.roomId;
+                setRoomId(newRoomId);
+                // If this room creation was for a scheduled transfer, save job to DB.
+                if (scheduledTime && isSender.current) {
+                    await saveScheduledJob({ files: filesToSend, scheduledTime, roomId: newRoomId });
+                    setTransferState('scheduled');
+                }
+                break;
             case 'peer-joined':
                 setStatusInternal({ type: 'info', message: 'Peer has joined. Negotiating secure channel...' });
                 isSender.current = data.payload.initiator;
@@ -345,7 +400,23 @@ const FileTransferPage: React.FC = () => {
         }
     };
     
-    const startConnection = (selectedFiles: File[]) => {
+    const startScheduledTransfer = () => {
+        if (peerConnectedRef.current) {
+            setStatusInternal({ type: 'info', message: 'Starting scheduled transfer...' });
+            setTransferState('transferring');
+            fileManager.current?.sendFiles(filesToSend);
+        } else {
+             setStatusInternal({ type: 'error', message: 'Peer not connected at scheduled time.' });
+             handleError('Scheduled Transfer Failed', 'Your peer was not connected at the scheduled start time.', [
+                 'Please coordinate with your peer and start a new transfer manually.',
+                 'Ensure both devices are online and on the app page before the scheduled time.'
+             ]);
+        }
+        setScheduledTime(null);
+        clearScheduledJob();
+    };
+
+    const handleStartSending = (selectedFiles: File[]) => {
         setFilesToSend(selectedFiles);
         setTransferStartTime(null);
         setAverageSpeed(0);
@@ -353,42 +424,39 @@ const FileTransferPage: React.FC = () => {
         setProgress({});
         initializeModules();
         setTransferState('connecting');
-        connectWebSocket(() => sendMessage('join-room', {}));
-    };
-
-    const handleStartSending = (selectedFiles: File[]) => {
         setStatusInternal({ type: 'info', message: 'Creating secure room...' });
-        startConnection(selectedFiles);
+        connectWebSocket(() => sendMessage('join-room', {}));
     };
     
     const handleScheduleTransfer = (time: number, selectedFiles: File[]) => {
         setScheduledTime(time);
+        setFilesToSend(selectedFiles);
+        setTransferStartTime(null);
+        setAverageSpeed(0);
+        setSpeedDataPoints([]);
+        setProgress({});
+        isSender.current = true;
+
+        initializeModules();
+        setTransferState('connecting'); // We are 'connecting' to the signaling server to get a room ID
+        setStatusInternal({ type: 'info', message: `Scheduling transfer for ${new Date(time).toLocaleString()}` });
+        
+        // This will request a room, the 'room-joined' handler will then save the job to DB.
+        connectWebSocket(() => sendMessage('join-room', {}));
+
         const delay = time - Date.now();
         if (delay > 0) {
-            setStatusInternal({ type: 'info', message: `Transfer scheduled for ${new Date(time).toLocaleString()}` });
-            startConnection(selectedFiles); // Start connection now, but defer sending files
-            scheduleTimerId.current = window.setTimeout(() => {
-                if (peerConnectedRef.current) {
-                    setTransferState('transferring');
-                    fileManager.current?.sendFiles(filesToSend);
-                } else {
-                     setStatusInternal({ type: 'error', message: 'Peer not connected at scheduled time.' });
-                     handleError('Scheduled Transfer Failed', 'Your peer was not connected at the scheduled start time.', [
-                         'Please coordinate with your peer and start a new transfer manually.',
-                         'Ensure both devices are online and on the app page before the scheduled time.'
-                     ]);
-                }
-                setScheduledTime(null);
-            }, delay);
+            scheduleTimerId.current = window.setTimeout(startScheduledTransfer, delay);
         } else {
-            handleStartSending(selectedFiles);
+            // If time is in the past, it will start when the peer connects.
         }
     };
     
     const handleCancelSchedule = () => {
         if(scheduleTimerId.current) clearTimeout(scheduleTimerId.current);
         setScheduledTime(null);
-        handleCancelTransfer(); // A schedule cancel should reset the whole state
+        clearScheduledJob();
+        handleCancelTransfer();
     };
 
     const handleStartReceiving = (id: string = joinRoomId) => {
@@ -410,8 +478,8 @@ const FileTransferPage: React.FC = () => {
         setTransferState('transferring');
     };
 
-    const handleCancelTransfer = () => {
-        if (isSender.current && ['connecting', 'transferring', 'paused'].includes(transferState) && filesToSend.length > 0) {
+    const handleCancelTransfer = async () => {
+        if (isSender.current && ['connecting', 'transferring', 'paused', 'scheduled'].includes(transferState) && filesToSend.length > 0) {
             const duration = transferStartTime ? (Date.now() - transferStartTime) / 1000 : 0;
             const completedFiles = new Set(Object.values(progress).filter(p => p.progress === 100).map(p => p.fileName));
             filesToSend.forEach(file => {
@@ -427,6 +495,7 @@ const FileTransferPage: React.FC = () => {
 
         // Full reset
         if(scheduleTimerId.current) clearTimeout(scheduleTimerId.current);
+        await clearScheduledJob();
         webRTCManager.current?.disconnect();
         ws.current?.close();
         ws.current = null; webRTCManager.current = null; fileManager.current = null; encryptionPipeline.current = null;
@@ -500,6 +569,7 @@ const FileTransferPage: React.FC = () => {
                 receivedFiles={receivedFiles}
                 status={status}
                 onCancelTransfer={handleCancelTransfer}
+                scheduledTime={scheduledTime}
             />;
         }
         return renderInitialView();

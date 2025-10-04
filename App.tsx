@@ -9,8 +9,9 @@ import PricingPage from './components/PricingPage';
 import FaqPage from './components/FaqPage';
 import FileTransferPage from './components/FileTransferPage';
 import AiChatAgent from './components/AiChatAgent';
+import ResourcesPage from './components/ResourcesPage';
 
-export type AppView = 'home' | 'services' | 'transfer' | 'pricing' | 'contact' | 'testimonials' | 'faq';
+export type AppView = 'home' | 'services' | 'transfer' | 'pricing' | 'contact' | 'testimonials' | 'faq' | 'resources';
 
 const App: React.FC = () => {
   const { theme } = useTheme();
@@ -22,6 +23,7 @@ const App: React.FC = () => {
     pricing: useRef<HTMLDivElement>(null),
     testimonials: useRef<HTMLDivElement>(null),
     faq: useRef<HTMLDivElement>(null),
+    resources: useRef<HTMLDivElement>(null),
     contact: useRef<HTMLDivElement>(null),
   };
 
@@ -53,6 +55,9 @@ const App: React.FC = () => {
         </section>
         <section id="faq" ref={sectionRefs.faq} className="py-16 scroll-mt-20">
           <FaqPage onScrollToSection={scrollToSection} />
+        </section>
+        <section id="resources" ref={sectionRefs.resources} className="py-16 scroll-mt-20">
+          <ResourcesPage onScrollToSection={scrollToSection} />
         </section>
         <section id="contact" ref={sectionRefs.contact} className="py-16 scroll-mt-20">
           <ContactPage />

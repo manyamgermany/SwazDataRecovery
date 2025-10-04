@@ -94,24 +94,25 @@ const TransferProgress: React.FC<TransferProgressProps> = ({
                     style={{ width: `${percentage}%` }}
                 ></div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                <div>
-                    <p className="font-semibold">Transferred</p>
-                    <p>{formatBytes(transferredBytes)} / {formatBytes(totalBytes)}</p>
+            
+            {/* Main stats - More prominent display */}
+            <div className="flex justify-around items-baseline mt-4 text-center">
+                <div className="w-1/2">
+                    <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Speed</p>
+                    <p className="text-2xl font-bold text-accent">{formatBytes(currentSpeed)}/s</p>
                 </div>
-                <div>
-                    <p className="font-semibold">Current Speed</p>
-                    <p>{formatBytes(currentSpeed)}/s</p>
-                </div>
-                <div>
-                    <p className="font-semibold">Avg. Speed</p>
-                    <p>{formatBytes(averageSpeed)}/s</p>
-                </div>
-                <div>
-                    <p className="font-semibold">ETA</p>
-                    <p>{formatEta(eta)}</p>
+                <div className="w-1/2">
+                    <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ETA</p>
+                    <p className="text-2xl font-bold text-accent">{formatEta(eta)}</p>
                 </div>
             </div>
+
+            {/* Secondary stats */}
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2 px-2">
+                <span>Transferred: {formatBytes(transferredBytes)} / {formatBytes(totalBytes)}</span>
+                <span>Avg: {formatBytes(averageSpeed)}/s</span>
+            </div>
+
             {status === 'transferring' && <SpeedChart data={speedData} />}
         </div>
     );
