@@ -18,6 +18,7 @@ export interface ChatMessage {
 
 const KNOWLEDGE_BASE = `
 - **Company Name**: Swaz Data Recovery Labs
+- **Address**: Swaz data recovery lab,Ajay Vihar Apartment, Sheela Nagar, Adapalli colony, Rajamahendravaram, Andhra Pradesh 533103.
 - **Core Business**: We provide a web application that **simulates** data recovery and offers a **real, secure peer-to-peer (P2P) file transfer** service.
 - **Data Recovery Simulation**:
   - **Is it real?**: No. The recovery part is a **simulation tool only**. It does not access, read, or modify any files on a user's actual storage devices. It is completely safe and demonstrates the recovery process.
@@ -36,7 +37,10 @@ const KNOWLEDGE_BASE = `
 - **Pricing & Quotes**:
   - **Simulation & P2P Transfer**: Both the simulation and the file transfer service are **completely free**.
   - **Real Data Recovery Quotes**: For real data recovery needs, users can fill out the form on the "Pricing & Quote" page. They need to describe their issue (e.g., "hard drive is clicking") and device type. Our team will review it and provide a personalized, no-obligation quote via email. There are no fixed prices because every recovery case is different.
-- **Contact**: Users can contact us via the form on our "Contact" page for questions about the simulation, the file transfer tool, or for real data recovery inquiries.
+- **Contact Information**:
+  - **For general questions or inquiries about the quote process**: Use the form on the "Contact" page or email contactus@swazdatarecovery.com.
+  - **For technical support with the P2P transfer tool or the simulation**: Email support@swazdatarecovery.com.
+  - **For general information, business, or press inquiries**: Email info@swazdatarecovery.com.
 `;
 
 const captureUserDetailsDeclaration: FunctionDeclaration = {
@@ -93,7 +97,7 @@ const systemInstruction = `You are "Swaz AI", a friendly and professional **mult
 3.  **Language Detection**: You MUST detect the language the user is writing in for each message.
 4.  **Respond in Kind**: You MUST respond in the **same language** the user uses. For example, if the user asks a question in Tamil, you must reply in Tamil. If they switch to Hindi, you must switch to Hindi.
 5.  **Maintain Persona**: Regardless of the language, you must remain helpful, reassuring, and professional. You are an AI assistant.
-6.  **Knowledge Base Adherence**: Strictly adhere to the provided knowledge base for all answers. Do not invent services, pricing, or capabilities.
+6.  **Knowledge Base Adherence**: Strictly adhere to the provided knowledge base for all answers. Do not invent services, pricing, or capabilities. When a user asks for contact information, provide the correct email for their specific need as detailed in the Knowledge Base.
     <KNOWLEDGE_BASE>
     ${KNOWLEDGE_BASE}
     </KNOWLEDGE_BASE>

@@ -71,6 +71,13 @@ const resources = [
 ];
 
 const ResourcesPage: React.FC<ResourcesPageProps> = ({ onScrollToSection }) => {
+  const isMobileDevice = () => {
+    // A common way to check for touch-capable devices, which are mostly mobile.
+    return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  };
+
+  const contactHref = isMobileDevice() ? 'tel:+919701087446' : 'mailto:contactus@swazdatarecovery.com';
+
   return (
     <div className="animate-slide-in space-y-16">
         <div className="text-center">
@@ -102,12 +109,12 @@ const ResourcesPage: React.FC<ResourcesPageProps> = ({ onScrollToSection }) => {
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
                 If you're facing a data loss situation, our team is ready to assist. Don't hesitate to reach out for a free quote.
             </p>
-            <button
-                onClick={() => onScrollToSection('contact')}
-                className="mt-8 px-8 py-4 bg-primary-light text-white font-bold rounded-lg shadow-lg hover:bg-secondary-light transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
+            <a
+                href={contactHref}
+                className="inline-block mt-8 px-8 py-4 bg-primary-light text-white font-bold rounded-lg shadow-lg hover:bg-secondary-light transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
             >
                 Contact Us
-            </button>
+            </a>
         </section>
     </div>
   );

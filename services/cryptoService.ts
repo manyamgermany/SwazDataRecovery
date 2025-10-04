@@ -26,7 +26,8 @@ export async function calculateSHA256(data: File | ArrayBuffer | Blob): Promise<
     return bufferToHex(hashBuffer);
   } catch (error) {
     console.error("Error calculating SHA-256:", error);
-    return 'crypto-not-available';
+    // Rethrow a more specific error for the caller to handle.
+    throw new Error('SHA-256 calculation failed. The browser\'s crypto API may be unavailable or has failed.');
   }
 }
 

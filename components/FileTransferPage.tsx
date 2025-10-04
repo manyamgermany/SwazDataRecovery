@@ -67,35 +67,44 @@ const FileTransferPage: React.FC = () => {
     // Effect to check for persisted scheduled jobs on load
     useEffect(() => {
         const checkForScheduledJob = async () => {
-            const job = await getScheduledJob();
-            if (job) {
-                const { files, scheduledTime: time, roomId: savedRoomId } = job;
-                const now = Date.now();
-                const timeRemaining = time - now;
-
-                // If a job is scheduled for more than 5 minutes ago, consider it missed.
-                if (timeRemaining < -5 * 60 * 1000) {
-                    setStatusInternal({ type: 'error', message: `A scheduled transfer for ${new Date(time).toLocaleString()} was missed.` });
-                    await clearScheduledJob();
-                    return;
+            try {
+                const job = await getScheduledJob();
+                if (job) {
+                    const { files, scheduledTime: time, roomId: savedRoomId } = job;
+                    const now = Date.now();
+                    const timeRemaining = time - now;
+    
+                    // If a job is scheduled for more than 5 minutes ago, consider it missed.
+                    if (timeRemaining < -5 * 60 * 1000) {
+                        setStatusInternal({ type: 'error', message: `A scheduled transfer for ${new Date(time).toLocaleString()} was missed.` });
+                        await clearScheduledJob();
+                        return;
+                    }
+    
+                    setStatusInternal({ type: 'info', message: 'Found a pending scheduled transfer.' });
+                    setFilesToSend(files);
+                    setScheduledTime(time);
+                    setRoomId(savedRoomId);
+                    setView('host');
+                    
+                    // Re-arm the schedule
+                    initializeModules();
+                    connectWebSocket(() => sendMessage('join-room', { roomId: savedRoomId }));
+                    setTransferState('scheduled');
+                    
+                    // If the time is in the past (but within the 5min grace period), it means the browser was closed.
+                    // We don't start immediately, but wait for the peer to connect. The peer connection logic will trigger the start.
+                    if (timeRemaining > 0) {
+                         scheduleTimerId.current = window.setTimeout(startScheduledTransfer, timeRemaining);
+                    }
                 }
-
-                setStatusInternal({ type: 'info', message: 'Found a pending scheduled transfer.' });
-                setFilesToSend(files);
-                setScheduledTime(time);
-                setRoomId(savedRoomId);
-                setView('host');
-                
-                // Re-arm the schedule
-                initializeModules();
-                connectWebSocket(() => sendMessage('join-room', { roomId: savedRoomId }));
-                setTransferState('scheduled');
-                
-                // If the time is in the past (but within the 5min grace period), it means the browser was closed.
-                // We don't start immediately, but wait for the peer to connect. The peer connection logic will trigger the start.
-                if (timeRemaining > 0) {
-                     scheduleTimerId.current = window.setTimeout(startScheduledTransfer, timeRemaining);
-                }
+            } catch (error) {
+                console.error("Failed to check for scheduled job:", error);
+                handleError(
+                    'Could Not Load Scheduled Transfer',
+                    'There was a problem accessing stored data for a previously scheduled transfer.',
+                    ['This may be due to browser privacy settings or a temporary issue.', 'Please try scheduling the transfer again.']
+                );
             }
         };
         checkForScheduledJob();
@@ -353,8 +362,18 @@ const FileTransferPage: React.FC = () => {
                 setRoomId(newRoomId);
                 // If this room creation was for a scheduled transfer, save job to DB.
                 if (scheduledTime && isSender.current) {
-                    await saveScheduledJob({ files: filesToSend, scheduledTime, roomId: newRoomId });
-                    setTransferState('scheduled');
+                    try {
+                        await saveScheduledJob({ files: filesToSend, scheduledTime, roomId: newRoomId });
+                        setTransferState('scheduled');
+                    } catch (error) {
+                        console.error("Failed to save scheduled job:", error);
+                        handleError(
+                            'Could Not Schedule Transfer',
+                            'There was a problem saving the details for your scheduled transfer.',
+                            ['This may be due to browser privacy settings or a temporary issue.', 'Please try scheduling again.']
+                        );
+                        handleCancelTransfer();
+                    }
                 }
                 break;
             case 'peer-joined':
@@ -452,10 +471,14 @@ const FileTransferPage: React.FC = () => {
         }
     };
     
-    const handleCancelSchedule = () => {
+    const handleCancelSchedule = async () => {
         if(scheduleTimerId.current) clearTimeout(scheduleTimerId.current);
         setScheduledTime(null);
-        clearScheduledJob();
+        try {
+            await clearScheduledJob();
+        } catch (error) {
+            console.error("Failed to clear scheduled job:", error);
+        }
         handleCancelTransfer();
     };
 
@@ -495,7 +518,11 @@ const FileTransferPage: React.FC = () => {
 
         // Full reset
         if(scheduleTimerId.current) clearTimeout(scheduleTimerId.current);
-        await clearScheduledJob();
+        try {
+            await clearScheduledJob();
+        } catch(e) {
+            console.error("Failed to clear scheduled job on cancel:", e);
+        }
         webRTCManager.current?.disconnect();
         ws.current?.close();
         ws.current = null; webRTCManager.current = null; fileManager.current = null; encryptionPipeline.current = null;

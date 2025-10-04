@@ -222,7 +222,11 @@ const AiChatAgent: React.FC = () => {
 
         } catch (error) {
             console.error("Failed to get AI response:", error);
-            const errorMessage: Message = { id: Date.now() + 1, text: "Sorry, I'm having trouble connecting. Please try again later.", sender: 'ai' };
+            let messageText = "Sorry, I'm having trouble connecting to the AI service right now. Please check your internet connection and try again in a moment.";
+            if (error instanceof Error && error.message.includes('API key')) {
+                messageText = "The AI chat agent is not configured correctly. Please contact the site administrator.";
+            }
+            const errorMessage: Message = { id: Date.now() + 1, text: messageText, sender: 'ai' };
             setMessages(prev => [...prev, errorMessage]);
         } finally {
             setIsLoading(false);

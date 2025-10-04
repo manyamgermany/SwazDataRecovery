@@ -139,22 +139,29 @@ export class FileTransferManager {
         const totalChunks = Math.ceil(file.size / this.chunkSize);
         const fileId = `${file.name}-${file.size}-${Date.now()}`;
 
-        this.sendingFileState = {
-            file,
-            metadata: {
-                fileId,
-                name: file.name,
-                type: file.type,
-                size: file.size,
-                totalChunks,
-                fullFileChecksum: await calculateSHA256(file),
-            },
-            sentChunksCount: 0,
-        };
-
-        this.sendMessage({ type: 'file-metadata', payload: this.sendingFileState.metadata });
-        this.callbacks.onStatusUpdate({ type: 'info', message: `Sending metadata for ${file.name}...` });
-        this.streamFile(); // Fire-and-forget async method
+        try {
+            this.sendingFileState = {
+                file,
+                metadata: {
+                    fileId,
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    totalChunks,
+                    fullFileChecksum: await calculateSHA256(file),
+                },
+                sentChunksCount: 0,
+            };
+    
+            this.sendMessage({ type: 'file-metadata', payload: this.sendingFileState.metadata });
+            this.callbacks.onStatusUpdate({ type: 'info', message: `Sending metadata for ${file.name}...` });
+            this.streamFile(); // Fire-and-forget async method
+        } catch (error) {
+            this.callbacks.onStatusUpdate({ type: 'error', message: `Critical error preparing ${file.name}: ${(error as Error).message}. Transfer of this file has been cancelled.` });
+            this.sendingFileState = null;
+            // Attempt to transfer the next file in the queue
+            this.startNextFileTransfer();
+        }
     }
 
     private async streamFile() {
@@ -217,7 +224,19 @@ export class FileTransferManager {
         const chunkBlob = file.slice(start, end);
         const chunkData = await chunkBlob.arrayBuffer();
 
-        const chunkChecksum = await calculateSHA256(chunkData);
+        let chunkChecksum;
+        try {
+            chunkChecksum = await calculateSHA256(chunkData);
+        } catch (error) {
+            this.callbacks.onStatusUpdate({ 
+                type: 'error', 
+                message: `Failed to process a chunk for ${name} due to a crypto error. The transfer will be stopped.`,
+                code: 'ENCRYPTION_FAILED', 
+                context: { fileName: name, fileId, chunkIndex }
+            });
+            this.webRTCManager.disconnect();
+            return;
+        }
 
         const chunkMetadata: ChunkMetadata = {
             fileId,
@@ -332,7 +351,17 @@ export class FileTransferManager {
         const fileState = this.receivingFiles.get(fileId);
         if (!fileState) return;
 
-        const receivedChecksum = await calculateSHA256(decryptedChunkData);
+        let receivedChecksum;
+        try {
+            receivedChecksum = await calculateSHA256(decryptedChunkData);
+        } catch (error) {
+            this.callbacks.onStatusUpdate({
+                type: 'error',
+                message: `Failed to verify a received chunk for ${fileState?.metadata.name || 'a file'} due to a crypto error.`,
+            });
+            return; // Discard chunk, let re-request handle it.
+        }
+
         if (receivedChecksum !== checksum) {
             this.callbacks.onStatusUpdate({
                 type: 'info',
@@ -391,20 +420,30 @@ export class FileTransferManager {
         };
 
         const fileBlob = new Blob(fileState.chunks as BlobPart[]);
-        const fullFileChecksum = await calculateSHA256(fileBlob);
-
-        if (fullFileChecksum === fileState.metadata.fullFileChecksum) {
-            const url = URL.createObjectURL(fileBlob);
-            this.callbacks.onFileReceived({
-                name: fileState.metadata.name,
-                type: fileState.metadata.type,
-                size: fileState.metadata.size,
-                url,
+        
+        try {
+            const fullFileChecksum = await calculateSHA256(fileBlob);
+    
+            if (fullFileChecksum === fileState.metadata.fullFileChecksum) {
+                const url = URL.createObjectURL(fileBlob);
+                this.callbacks.onFileReceived({
+                    name: fileState.metadata.name,
+                    type: fileState.metadata.type,
+                    size: fileState.metadata.size,
+                    url,
+                });
+                this.sendMessage({ type: 'file-received-ack', payload: { fileId } });
+                this.receivingFiles.delete(fileId);
+            } else {
+                this.callbacks.onStatusUpdate({ type: 'error', message: `Final file checksum mismatch for ${fileState.metadata.name}. Transfer failed.`, code: 'CHECKSUM_MISMATCH', context: { fileName: fileState.metadata.name, fileId } });
+            }
+        } catch (error) {
+            this.callbacks.onStatusUpdate({ 
+                type: 'error', 
+                message: `Failed to verify the final file integrity for ${fileState.metadata.name} due to a crypto error.`, 
+                code: 'CHECKSUM_MISMATCH', 
+                context: { fileName: fileState.metadata.name, fileId } 
             });
-            this.sendMessage({ type: 'file-received-ack', payload: { fileId } });
-            this.receivingFiles.delete(fileId);
-        } else {
-            this.callbacks.onStatusUpdate({ type: 'error', message: `Final file checksum mismatch for ${fileState.metadata.name}. Transfer failed.`, code: 'CHECKSUM_MISMATCH', context: { fileName: fileState.metadata.name, fileId } });
         }
     }
 

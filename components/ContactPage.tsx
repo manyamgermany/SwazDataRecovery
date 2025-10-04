@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { DriveType } from '../types';
 import { PhoneIcon, EmailIcon, MapPinIcon, ClockIcon, ChevronDownIcon } from './icons/Icons';
@@ -120,17 +121,34 @@ const ContactPage: React.FC = () => {
                 <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
                     <h2 className="text-2xl font-bold mb-4">Contact Information</h2>
                     <ul className="space-y-4 text-gray-700 dark:text-gray-300">
+                        <li className="flex items-start">
+                            <MapPinIcon className="w-6 h-6 mr-4 text-accent flex-shrink-0" />
+                            <span>Swaz data recovery lab,Ajay Vihar Apartment, Sheela Nagar, Adapalli colony, Rajamahendravaram, Andhra Pradesh 533103.</span>
+                        </li>
+                        <li className="flex items-start">
+                            <EmailIcon className="w-6 h-6 mr-4 text-accent flex-shrink-0 mt-1" />
+                            <div>
+                                <strong className="font-semibold text-text-light dark:text-text-dark">General Inquiries:</strong>
+                                <a href="mailto:contactus@swazdatarecovery.com" className="block hover:underline hover:text-accent transition-colors">contactus@swazdatarecovery.com</a>
+                            </div>
+                        </li>
+                        <li className="flex items-start">
+                            <EmailIcon className="w-6 h-6 mr-4 text-accent flex-shrink-0 mt-1" />
+                            <div>
+                                <strong className="font-semibold text-text-light dark:text-text-dark">Technical Support:</strong>
+                                <a href="mailto:support@swazdatarecovery.com" className="block hover:underline hover:text-accent transition-colors">support@swazdatarecovery.com</a>
+                            </div>
+                        </li>
+                        <li className="flex items-start">
+                            <EmailIcon className="w-6 h-6 mr-4 text-accent flex-shrink-0 mt-1" />
+                            <div>
+                                <strong className="font-semibold text-text-light dark:text-text-dark">Information:</strong>
+                                <a href="mailto:info@swazdatarecovery.com" className="block hover:underline hover:text-accent transition-colors">info@swazdatarecovery.com</a>
+                            </div>
+                        </li>
                         <li className="flex items-center">
                             <PhoneIcon className="w-6 h-6 mr-4 text-accent" />
-                            <span>(555) 123-4567</span>
-                        </li>
-                        <li className="flex items-center">
-                            <EmailIcon className="w-6 h-6 mr-4 text-accent" />
-                            <span>support@swazrecovery.sim</span>
-                        </li>
-                         <li className="flex items-start">
-                            <MapPinIcon className="w-6 h-6 mr-4 text-accent flex-shrink-0" />
-                            <span>123 Recovery Lane, Dataville, DC 54321</span>
+                            <a href="tel:+919701087446" className="hover:underline hover:text-accent transition-colors">+91-9701087446</a>
                         </li>
                     </ul>
                 </div>
