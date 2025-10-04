@@ -25,7 +25,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
     document.body.style.overflow = isMenuOpen ? 'hidden' : 'auto';
   }, [isMenuOpen]);
 
-  const handleNavClick = (view: AppView) => {
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, view: AppView) => {
+    e.preventDefault();
     onNavigate(view);
     setIsMenuOpen(false);
   }
@@ -34,19 +35,20 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
     <>
       <header className="bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm shadow-md sticky top-0 z-50 transition-colors duration-500">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <button onClick={() => handleNavClick('home')} className="flex items-center space-x-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg p-1 transition-transform active:scale-95">
+          <a href="#home" onClick={(e) => handleNavClick(e, 'home')} className="flex items-center space-x-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg p-1 transition-transform active:scale-95">
             <SwazLogoIcon className="w-8 h-8 text-primary-light" />
             <h1 className="text-lg md:text-xl font-bold text-text-light dark:text-text-dark">
               Swaz Data Recovery Labs
             </h1>
-          </button>
+          </a>
           
           {/* Desktop Nav */}
           <nav className="hidden sm:flex items-center space-x-1 md:space-x-4">
               {navLinks.map(link => (
-                  <button
+                  <a
                     key={link.view}
-                    onClick={() => handleNavClick(link.view)}
+                    href={`#${link.view}`}
+                    onClick={(e) => handleNavClick(e, link.view)}
                     className={`px-3 py-1.5 rounded-md transition-all duration-300 active:scale-95 ${
                         link.label === 'File Transfer' 
                         ? 'font-bold text-primary-light bg-primary-light/10 hover:bg-primary-light/20' 
@@ -54,7 +56,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                     }`}
                 >
                     {link.label}
-                </button>
+                </a>
               ))}
               <button
                   onClick={toggleTheme}
@@ -90,9 +92,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
           </div>
           <nav className="flex flex-col items-center justify-center space-y-8 h-full -mt-16">
               {navLinks.map(link => (
-                  <button
+                  <a
                     key={link.view}
-                    onClick={() => handleNavClick(link.view)}
+                    href={`#${link.view}`}
+                    onClick={(e) => handleNavClick(e, link.view)}
                     className={`text-3xl font-bold transition-all active:scale-95 ${
                         link.label === 'File Transfer'
                         ? 'text-primary-light'
@@ -100,7 +103,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                     }`}
                 >
                     {link.label}
-                </button>
+                </a>
               ))}
           </nav>
       </div>

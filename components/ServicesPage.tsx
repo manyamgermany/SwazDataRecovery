@@ -112,12 +112,16 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onScrollToSection }) => {
         <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
             Don't wait. Start the secure recovery simulation now and see how Swaz Data Recovery Labs can help you retrieve your lost data.
         </p>
-        <button
-            onClick={() => onScrollToSection('home')}
-            className="mt-8 px-8 py-4 bg-primary-light text-white font-bold rounded-lg shadow-lg hover:bg-secondary-light transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent"
+        <a
+            href="#home"
+            onClick={(e) => {
+              e.preventDefault();
+              onScrollToSection('home');
+            }}
+            className="inline-block mt-8 px-8 py-4 bg-primary-light text-white font-bold rounded-lg shadow-lg hover:bg-secondary-light transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent"
         >
             Start Your Recovery Now
-        </button>
+        </a>
       </section>
     </div>
   );

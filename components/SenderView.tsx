@@ -289,6 +289,10 @@ const SenderView: React.FC<SenderViewProps> = ({
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isScheduling, setIsScheduling] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [transferSelection, setTransferSelection] = useState<Set<string>>(new Set());
+    const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+
+    const getFileKey = (file: File): string => `${file.name}-${file.size}-${file.lastModified}`;
 
     useEffect(() => {
         if (files.length > 0 && selectedFiles.length === 0 && (transferState !== 'idle')) {
@@ -308,20 +312,76 @@ const SenderView: React.FC<SenderViewProps> = ({
     }, [selectedFiles]);
 
     const handleRemoveFile = (indexToRemove: number) => {
+        const fileToRemove = selectedFiles[indexToRemove];
+        const fileKey = getFileKey(fileToRemove);
+        
+        const newSelection = new Set(transferSelection);
+        if (newSelection.has(fileKey)) {
+            newSelection.delete(fileKey);
+            setTransferSelection(newSelection);
+        }
+
         setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
     };
     
-    const handleClearAll = () => setSelectedFiles([]);
+    const handleClearAll = () => {
+        setSelectedFiles([]);
+        setTransferSelection(new Set());
+        setLastSelectedIndex(null);
+    };
+    
+    const handleFileSelect = (index: number, e: React.MouseEvent) => {
+        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+        const isShift = e.shiftKey;
+    
+        const newSelection = new Set(transferSelection);
+        const fileKey = getFileKey(selectedFiles[index]);
+    
+        if (isShift && lastSelectedIndex !== null) {
+            const start = Math.min(index, lastSelectedIndex);
+            const end = Math.max(index, lastSelectedIndex);
+            for (let i = start; i <= end; i++) {
+                newSelection.add(getFileKey(selectedFiles[i]));
+            }
+        } else if (isCtrlOrCmd) {
+            if (newSelection.has(fileKey)) {
+                newSelection.delete(fileKey);
+            } else {
+                newSelection.add(fileKey);
+            }
+        } else {
+            if (newSelection.has(fileKey) && newSelection.size === 1) {
+                newSelection.clear();
+            } else {
+                newSelection.clear();
+                newSelection.add(fileKey);
+            }
+        }
+        
+        setTransferSelection(newSelection);
+        setLastSelectedIndex(index);
+    };
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            const allFileKeys = new Set(selectedFiles.map(getFileKey));
+            setTransferSelection(allFileKeys);
+        } else {
+            setTransferSelection(new Set());
+        }
+    };
 
     const handleStart = () => {
-        if (selectedFiles.length > 0) {
-            onStartTransfer(selectedFiles);
+        const filesToTransfer = selectedFiles.filter(file => transferSelection.has(getFileKey(file)));
+        if (filesToTransfer.length > 0) {
+            onStartTransfer(filesToTransfer);
         }
     };
     
     const handleScheduleConfirm = (time: number) => {
-        if (selectedFiles.length > 0) {
-            onScheduleTransfer(time, selectedFiles);
+        const filesToTransfer = selectedFiles.filter(file => transferSelection.has(getFileKey(file)));
+        if (filesToTransfer.length > 0) {
+            onScheduleTransfer(time, filesToTransfer);
         }
         setIsScheduling(false);
     };
@@ -341,7 +401,6 @@ const SenderView: React.FC<SenderViewProps> = ({
     }, [roomId, peerConnected, transferState]);
     
     const totalSize = useMemo(() => files.reduce((sum, f) => sum + f.size, 0), [files]);
-    const totalSelectedSize = useMemo(() => selectedFiles.reduce((sum, f) => sum + f.size, 0), [selectedFiles]);
 
     const totalTransferred = useMemo(() => {
         return Object.values(progress).reduce((sum, p) => {
@@ -349,6 +408,13 @@ const SenderView: React.FC<SenderViewProps> = ({
             return sum + ((file?.size || 0) * p.progress) / 100;
         }, 0);
     }, [progress, files]);
+
+    const filesToTransferCount = transferSelection.size;
+    const totalSizeForTransfer = useMemo(() => {
+        return selectedFiles
+            .filter(file => transferSelection.has(getFileKey(file)))
+            .reduce((sum, f) => sum + f.size, 0);
+    }, [selectedFiles, transferSelection]);
 
     if (transferState === 'idle') {
         return (
@@ -358,15 +424,39 @@ const SenderView: React.FC<SenderViewProps> = ({
                 {selectedFiles.length > 0 && (
                     <div className="mt-6 w-full text-left animate-slide-in">
                         <div className="flex justify-between items-center mb-2">
-                             <h3 className="font-bold text-lg">Files to Send</h3>
+                             <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="select-all-files"
+                                    className="w-5 h-5 text-accent bg-gray-100 border-gray-300 rounded focus:ring-accent dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                    checked={selectedFiles.length > 0 && transferSelection.size === selectedFiles.length}
+                                    onChange={handleSelectAll}
+                                    ref={el => { if (el) el.indeterminate = transferSelection.size > 0 && transferSelection.size < selectedFiles.length; }}
+                                />
+                                <label htmlFor="select-all-files" className="font-bold text-lg">Files to Send</label>
+                            </div>
                              <button onClick={handleClearAll} className="flex items-center gap-1 px-2 py-1 text-sm text-red-500 hover:bg-red-500/10 rounded-md transition-colors active:scale-95">
                                 <TrashIcon className="w-4 h-4" /> Clear All
                             </button>
                         </div>
                         <div className="space-y-2 max-h-60 overflow-y-auto p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-700">
                             {selectedFiles.map((file, index) => (
-                                <div key={`${file.name}-${file.lastModified}-${index}`} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-md shadow-sm animate-slide-in">
-                                    <div className="flex items-center gap-3 truncate min-w-0">
+                                <div 
+                                    key={getFileKey(file)}
+                                    onClick={(e) => handleFileSelect(index, e)}
+                                    className={`flex items-center p-2 rounded-md shadow-sm animate-slide-in cursor-pointer transition-colors ${
+                                        transferSelection.has(getFileKey(file))
+                                            ? 'bg-accent/10 dark:bg-accent/20 border-accent'
+                                            : 'bg-white dark:bg-gray-800 border-transparent'
+                                    } border-l-4`}
+                                >
+                                    <div className="flex items-center gap-3 truncate min-w-0 flex-grow">
+                                        <input
+                                            type="checkbox"
+                                            checked={transferSelection.has(getFileKey(file))}
+                                            readOnly
+                                            className="w-5 h-5 text-accent bg-gray-100 border-gray-300 rounded focus:ring-accent dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 pointer-events-none"
+                                        />
                                         {getFileTypeIcon(file.type)}
                                         <div className="truncate">
                                             <span className="truncate text-sm font-semibold text-text-light dark:text-text-dark" title={file.name}>{file.name}</span>
@@ -374,8 +464,11 @@ const SenderView: React.FC<SenderViewProps> = ({
                                         </div>
                                     </div>
                                     <button 
-                                        onClick={() => handleRemoveFile(index)}
-                                        className="-m-2 p-2 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-500/10 active:bg-red-500/20 transition-colors flex-shrink-0 ml-2"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRemoveFile(index);
+                                        }}
+                                        className="p-2 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-500/10 active:bg-red-500/20 transition-colors flex-shrink-0 ml-2"
                                         aria-label={`Remove ${file.name}`}
                                     >
                                         <XCircleIcon className="w-6 h-6"/>
@@ -385,16 +478,24 @@ const SenderView: React.FC<SenderViewProps> = ({
                         </div>
                         
                         <div className="mt-4 flex justify-between items-center text-sm font-medium text-gray-600 dark:text-gray-400 px-1">
-                           <p>Total files: <span className="font-bold text-text-light dark:text-text-dark">{selectedFiles.length}</span></p>
-                           <p>Total size: <span className="font-bold text-text-light dark:text-text-dark">{formatBytes(totalSelectedSize)}</span></p>
+                           <p>Selected: <span className="font-bold text-text-light dark:text-text-dark">{filesToTransferCount} / {selectedFiles.length} file(s)</span></p>
+                           <p>Size: <span className="font-bold text-text-light dark:text-text-dark">{formatBytes(totalSizeForTransfer)}</span></p>
                         </div>
                         
                         <div className="mt-4 grid grid-cols-2 gap-3">
-                             <button onClick={() => setIsScheduling(true)} className="w-full px-4 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-all active:scale-95 flex items-center justify-center gap-2">
-                                <CalendarIcon className="w-5 h-5"/> Schedule
+                             <button 
+                                onClick={() => setIsScheduling(true)} 
+                                disabled={filesToTransferCount === 0}
+                                className="w-full px-4 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-opacity-80 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <CalendarIcon className="w-5 h-5"/> Schedule ({filesToTransferCount})
                             </button>
-                            <button onClick={handleStart} className="w-full px-4 py-3 bg-primary-light text-white font-bold rounded-lg shadow-md hover:bg-secondary-light transition-all active:scale-95">
-                               Create Secure Room & Send
+                            <button 
+                                onClick={handleStart} 
+                                disabled={filesToTransferCount === 0}
+                                className="w-full px-4 py-3 bg-primary-light text-white font-bold rounded-lg shadow-md hover:bg-secondary-light transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                               Send ({filesToTransferCount})
                             </button>
                         </div>
                     </div>

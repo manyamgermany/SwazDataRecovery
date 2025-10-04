@@ -116,7 +116,8 @@ const FaqPage: React.FC<FaqPageProps> = ({ onScrollToSection }) => {
   
   const slugify = (text: string) => text.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-').replace(/[^\w-]+/g, '');
 
-  const handleResourceClick = (resourceId: string) => {
+  const handleResourceClick = (e: React.MouseEvent<HTMLAnchorElement>, resourceId: string) => {
+    e.preventDefault();
     // We need to navigate to the resources page first, then scroll.
     onScrollToSection('resources');
     // Use a timeout to allow the page to scroll to the section first, then to the element.
@@ -209,14 +210,15 @@ const FaqPage: React.FC<FaqPageProps> = ({ onScrollToSection }) => {
             <h2 className="text-3xl font-bold mb-8 text-center text-text-light dark:text-text-dark">Helpful Resources</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {resources.map((resource, index) => (
-                     <button 
-                        onClick={() => handleResourceClick(resource.id)} 
+                     <a 
+                        href={`#${resource.id}`}
+                        onClick={(e) => handleResourceClick(e, resource.id)} 
                         key={index} 
                         className="block p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-transform duration-300 text-left"
                     >
                         <DocumentIcon className="w-8 h-8 mb-3 text-accent" />
                         <h3 className="font-semibold text-text-light dark:text-text-dark">{resource.title}</h3>
-                    </button>
+                    </a>
                 ))}
             </div>
         </section>
@@ -227,12 +229,16 @@ const FaqPage: React.FC<FaqPageProps> = ({ onScrollToSection }) => {
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
                 Our support team is ready to assist you. Don't hesitate to reach out for personalized help.
             </p>
-            <button
-                onClick={() => onScrollToSection('contact')}
-                className="mt-8 px-8 py-4 bg-accent text-white font-bold rounded-lg shadow-lg hover:bg-opacity-80 transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/50"
+            <a
+                href="#contact"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onScrollToSection('contact');
+                }}
+                className="inline-block mt-8 px-8 py-4 bg-accent text-white font-bold rounded-lg shadow-lg hover:bg-opacity-80 transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/50"
             >
                 Contact Support
-            </button>
+            </a>
         </section>
     </div>
   );

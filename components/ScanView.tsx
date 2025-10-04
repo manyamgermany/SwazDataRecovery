@@ -61,15 +61,17 @@ const ScanView: React.FC<ScanViewProps> = ({ drive, onScanComplete, onScanError,
     return recoveredFiles.filter(file => activeFilters.has(file.type));
   }, [recoveredFiles, activeFilters]);
 
+  // Fix: Correctly update the 'select all' checkbox state based on visible files.
   useEffect(() => {
     if (selectAllCheckboxRef.current) {
-      const numSelected = selectedForRecovery.size;
+      const visibleFileIds = new Set(filteredFiles.map(f => f.id));
+      const numSelectedVisible = Array.from(selectedForRecovery).filter(id => visibleFileIds.has(id)).length;
       const numVisible = filteredFiles.length;
 
-      if (numVisible > 0 && numSelected === numVisible) {
+      if (numVisible > 0 && numSelectedVisible === numVisible) {
         selectAllCheckboxRef.current.checked = true;
         selectAllCheckboxRef.current.indeterminate = false;
-      } else if (numSelected > 0 && numSelected < numVisible) {
+      } else if (numSelectedVisible > 0 && numSelectedVisible < numVisible) {
         selectAllCheckboxRef.current.checked = false;
         selectAllCheckboxRef.current.indeterminate = true;
       } else {
@@ -103,14 +105,23 @@ const ScanView: React.FC<ScanViewProps> = ({ drive, onScanComplete, onScanError,
     });
   }, []);
   
+  // Fix: Correctly select or deselect only the visible files when 'select all' is clicked.
   const selectAll = useCallback(() => {
-    // If not all visible files are selected (includes none or some), select all.
-    // Otherwise (if all are selected), clear the selection.
-    if (selectedForRecovery.size < filteredFiles.length) {
-        setSelectedForRecovery(new Set(filteredFiles.map(f => f.id)));
-    } else {
-        setSelectedForRecovery(new Set());
+    const visibleFileIds = filteredFiles.map(f => f.id);
+    const visibleFileIdsSet = new Set(visibleFileIds);
+
+    const numSelectedVisible = Array.from(selectedForRecovery).filter(id => visibleFileIdsSet.has(id)).length;
+    
+    const newSelection = new Set(selectedForRecovery);
+
+    // If not all visible files are selected (including the case where some are), select all visible files.
+    if (numSelectedVisible < visibleFileIds.length) {
+      visibleFileIds.forEach(id => newSelection.add(id));
+    } else { // Otherwise (if all visible files are already selected), deselect all visible files.
+      visibleFileIds.forEach(id => newSelection.delete(id));
     }
+    
+    setSelectedForRecovery(newSelection);
   }, [filteredFiles, selectedForRecovery]);
   
   if (currentStep === AppStep.SCANNING) {

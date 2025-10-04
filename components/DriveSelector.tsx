@@ -21,12 +21,16 @@ const DriveSelector: React.FC<DriveSelectorProps> = ({ onScrollToSection }) => {
             <p className="text-lg md:text-xl mb-8 max-w-3xl mx-auto text-gray-600 dark:text-gray-400">
                 Explore our expert solutions, including secure peer-to-peer file transfers and insightful recovery simulations.
             </p>
-            <button
-                onClick={() => onScrollToSection('services')}
+            <a
+                href="#services"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onScrollToSection('services');
+                }}
                 className="px-8 py-4 bg-primary-light text-white font-bold rounded-lg shadow-lg hover:bg-secondary-light transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent"
             >
                 Explore Our Services
-            </button>
+            </a>
             <p className="mt-6 text-sm text-gray-500 dark:text-gray-400 italic">
                 "Swaz Data Recovery Labs saved my project files. A true lifesaver!" - A Happy User
             </p>

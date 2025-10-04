@@ -1,0 +1,6 @@
+# Allow all web crawlers to access all content
+User-agent: *
+Allow: /
+
+# Point crawlers to the sitemap for a list of all pages
+Sitemap: https://swaz-data-recovery-labs.com/sitemap.xml

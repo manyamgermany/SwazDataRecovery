@@ -109,12 +109,16 @@ const TestimonialsPage: React.FC<TestimonialsPageProps> = ({ onScrollToSection }
         <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
             If our simulation helped you, we'd love to hear about it. Your story could help others in a similar situation.
         </p>
-        <button
-            onClick={() => onScrollToSection('contact')}
-            className="mt-8 px-8 py-4 bg-accent text-white font-bold rounded-lg shadow-lg hover:bg-opacity-80 transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/50"
+        <a
+            href="#contact"
+            onClick={(e) => {
+              e.preventDefault();
+              onScrollToSection('contact');
+            }}
+            className="inline-block mt-8 px-8 py-4 bg-accent text-white font-bold rounded-lg shadow-lg hover:bg-opacity-80 transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/50"
         >
             Share Your Experience
-        </button>
+        </a>
       </section>
     </div>
   );
