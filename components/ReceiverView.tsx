@@ -1,6 +1,6 @@
 import React from 'react';
 import { FileProgress, ReceivedFile, TransferStatus } from '../services/webrtcService';
-import { ShieldCheckIcon, LinkIcon } from './icons/Icons';
+import { ShieldCheckIcon, LinkIcon, DocumentIcon, ImageIcon, VideoIcon, AudioIcon } from './icons/Icons';
 import { formatBytes } from '../utils/formatters';
 
 interface ReceiverViewProps {
@@ -11,8 +11,48 @@ interface ReceiverViewProps {
     onCancelTransfer: () => void;
 }
 
+const getFileTypeIcon = (mimeType: string) => {
+    const commonClasses = "w-8 h-8 flex-shrink-0 text-accent";
+    if (mimeType.startsWith('image/')) {
+        return <ImageIcon className={commonClasses} />;
+    }
+    if (mimeType.startsWith('video/')) {
+        return <VideoIcon className={commonClasses} />;
+    }
+    if (mimeType.startsWith('audio/')) {
+        return <AudioIcon className={commonClasses} />;
+    }
+    return <DocumentIcon className={commonClasses} />;
+};
+
+const ReceivingFileProgressItem: React.FC<{progress: FileProgress}> = ({ progress }) => {
+    const { fileName, fileSize, fileType, progress: percent, transferredChunks, totalChunks } = progress;
+    return (
+        <div className="p-3 bg-white dark:bg-gray-800 rounded-lg text-left shadow-sm">
+            <div className="flex items-center gap-3">
+                {getFileTypeIcon(fileType)}
+                <div className="flex-grow min-w-0">
+                    <div className="flex justify-between items-baseline text-sm">
+                        <span className="font-semibold truncate pr-2" title={fileName}>{fileName}</span>
+                        <span className="text-xs text-gray-500 flex-shrink-0">{formatBytes(fileSize)}</span>
+                    </div>
+                     <div className="flex justify-between items-baseline text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <span>
+                           Chunks: {transferredChunks} / {totalChunks > 0 ? totalChunks : '?'}
+                        </span>
+                        <span className="font-medium">{percent}%</span>
+                    </div>
+                    <div className="w-full bg-gray-300 dark:bg-gray-700 rounded-full h-2 mt-1">
+                        <div className="bg-accent h-2 rounded-full transition-all" style={{ width: `${percent}%` }}></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ReceiverView: React.FC<ReceiverViewProps> = ({
-    peerConnected, progress, receivedFiles, status, onCancelTransfer
+    peerConnected, progress, receivedFiles, onCancelTransfer
 }) => {
 
     const filesInProgress = Object.values(progress);
@@ -31,31 +71,25 @@ const ReceiverView: React.FC<ReceiverViewProps> = ({
                     {filesInProgress.length > 0 ? (
                         filesInProgress.map(p => {
                             const completedFile = completedFilesMap.get(p.fileName);
-                            return (
-                                <div key={p.fileId} className="p-2 bg-white dark:bg-gray-800 rounded text-left">
-                                    {completedFile ? (
-                                        <div className="flex items-center justify-between">
-                                            <div>
+                            if (completedFile) {
+                               return (
+                                <div key={p.fileId} className="p-3 bg-white dark:bg-gray-800 rounded-lg text-left shadow-sm">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            {getFileTypeIcon(completedFile.type)}
+                                            <div className="truncate">
                                                 <p className="font-semibold truncate">{p.fileName}</p>
                                                 <p className="text-xs text-green-500">Completed ({formatBytes(completedFile.size)})</p>
                                             </div>
-                                            <a href={completedFile.url} download={completedFile.name} className="flex-shrink-0 ml-4 px-3 py-1 bg-green-500 text-white text-sm font-semibold rounded-md hover:bg-green-600">
-                                                Download
-                                            </a>
                                         </div>
-                                    ) : (
-                                        <div>
-                                            <div className="flex justify-between items-center text-sm mb-1">
-                                                <span className="font-semibold truncate">{p.fileName}</span>
-                                                <span className="text-gray-500">{p.progress}%</span>
-                                            </div>
-                                            <div className="w-full bg-gray-300 dark:bg-gray-700 rounded-full h-2">
-                                                <div className="bg-accent h-2 rounded-full transition-all" style={{ width: `${p.progress}%` }}></div>
-                                            </div>
-                                        </div>
-                                    )}
+                                        <a href={completedFile.url} download={completedFile.name} className="flex-shrink-0 ml-4 px-3 py-1 bg-green-500 text-white text-sm font-semibold rounded-md hover:bg-green-600">
+                                            Download
+                                        </a>
+                                    </div>
                                 </div>
-                            );
+                               );
+                            }
+                            return <ReceivingFileProgressItem key={p.fileId} progress={p} />;
                         })
                     ) : (
                          <p className="text-center text-gray-500 py-8">Waiting to receive files from sender...</p>

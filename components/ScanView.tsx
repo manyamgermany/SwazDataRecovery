@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Drive, RecoveredFile, FileType, AppStep } from '../types';
 import { simulateFileRecovery } from '../services/mockData';
 import FileItem from './FileItem';
@@ -21,6 +21,7 @@ const ScanView: React.FC<ScanViewProps> = ({ drive, onScanComplete, onScanError,
   const [activeFilters, setActiveFilters] = useState<Set<FileType>>(new Set(fileTypeFilters));
   const [selectedFileForPreview, setSelectedFileForPreview] = useState<RecoveredFile | null>(null);
   const [selectedForRecovery, setSelectedForRecovery] = useState<Set<string>>(new Set());
+  const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (currentStep === AppStep.SCANNING) {
@@ -55,6 +56,28 @@ const ScanView: React.FC<ScanViewProps> = ({ drive, onScanComplete, onScanError,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, drive, onScanComplete, onScanError]);
+
+  const filteredFiles = useMemo(() => {
+    return recoveredFiles.filter(file => activeFilters.has(file.type));
+  }, [recoveredFiles, activeFilters]);
+
+  useEffect(() => {
+    if (selectAllCheckboxRef.current) {
+      const numSelected = selectedForRecovery.size;
+      const numVisible = filteredFiles.length;
+
+      if (numVisible > 0 && numSelected === numVisible) {
+        selectAllCheckboxRef.current.checked = true;
+        selectAllCheckboxRef.current.indeterminate = false;
+      } else if (numSelected > 0 && numSelected < numVisible) {
+        selectAllCheckboxRef.current.checked = false;
+        selectAllCheckboxRef.current.indeterminate = true;
+      } else {
+        selectAllCheckboxRef.current.checked = false;
+        selectAllCheckboxRef.current.indeterminate = false;
+      }
+    }
+  }, [selectedForRecovery, filteredFiles]);
   
   const toggleFilter = useCallback((filter: FileType) => {
     setActiveFilters(prev => {
@@ -79,18 +102,16 @@ const ScanView: React.FC<ScanViewProps> = ({ drive, onScanComplete, onScanError,
         return newSelection;
     });
   }, []);
-
-  const filteredFiles = useMemo(() => {
-    return recoveredFiles.filter(file => activeFilters.has(file.type));
-  }, [recoveredFiles, activeFilters]);
   
   const selectAll = useCallback(() => {
-    if(selectedForRecovery.size === filteredFiles.length) {
-        setSelectedForRecovery(new Set());
-    } else {
+    // If not all visible files are selected (includes none or some), select all.
+    // Otherwise (if all are selected), clear the selection.
+    if (selectedForRecovery.size < filteredFiles.length) {
         setSelectedForRecovery(new Set(filteredFiles.map(f => f.id)));
+    } else {
+        setSelectedForRecovery(new Set());
     }
-  }, [filteredFiles, selectedForRecovery.size]);
+  }, [filteredFiles, selectedForRecovery]);
   
   if (currentStep === AppStep.SCANNING) {
     return (
@@ -138,9 +159,10 @@ const ScanView: React.FC<ScanViewProps> = ({ drive, onScanComplete, onScanError,
             <input 
                 type="checkbox"
                 id="select-all"
+                ref={selectAllCheckboxRef}
                 className="w-5 h-5 text-accent bg-gray-100 border-gray-300 rounded focus:ring-accent dark:focus:ring-accent dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                 onChange={selectAll}
-                checked={selectedForRecovery.size > 0 && selectedForRecovery.size === filteredFiles.length}
+                aria-label="Select all visible files"
             />
             <label htmlFor="select-all" className="ml-2 font-medium text-text-light dark:text-text-dark">Select All Visible</label>
         </div>

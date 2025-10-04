@@ -3,6 +3,39 @@ import { formatBytes, formatEta } from '../utils/formatters';
 
 type TransferStatus = 'transferring' | 'paused' | 'completed' | 'error' | 'idle';
 
+interface SpeedChartProps {
+    data: number[];
+    width?: number;
+    height?: number;
+}
+
+const SpeedChart: React.FC<SpeedChartProps> = ({ data, width = 300, height = 60 }) => {
+    if (!data || data.length < 2) {
+        return <div style={{width, height}} className="flex items-center justify-center text-xs text-gray-400">Awaiting speed data...</div>;
+    }
+    const maxSpeed = Math.max(...data, 1); // Avoid division by zero
+    const points = data.map((d, i) => `${(i / (data.length - 1)) * width},${height - (d / maxSpeed) * (height - 2)}`).join(' ');
+
+    return (
+        <div className="mt-2">
+            <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+                 <defs>
+                    <linearGradient id="speedGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.4"/>
+                        <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0"/>
+                    </linearGradient>
+                </defs>
+                <polyline fill="none" stroke="var(--color-accent, #457B9D)" strokeWidth="2" points={points} />
+                <polygon fill="url(#speedGradient)" points={`0,${height} ${points} ${width},${height}`} />
+            </svg>
+            <div className="flex justify-between text-xs text-gray-400 -mt-2">
+                <span>0 B/s</span>
+                <span>{formatBytes(maxSpeed)}/s</span>
+            </div>
+        </div>
+    );
+};
+
 interface TransferProgressProps {
     fileName?: string;
     transferredBytes: number;
@@ -11,6 +44,7 @@ interface TransferProgressProps {
     averageSpeed: number; // bytes/sec
     eta: number; // seconds
     status?: TransferStatus;
+    speedData?: number[];
 }
 
 const TransferProgress: React.FC<TransferProgressProps> = ({
@@ -21,6 +55,7 @@ const TransferProgress: React.FC<TransferProgressProps> = ({
     averageSpeed,
     eta,
     status = 'transferring',
+    speedData = [],
 }) => {
     const percentage = totalBytes > 0 ? (transferredBytes / totalBytes) * 100 : 0;
 
@@ -77,6 +112,7 @@ const TransferProgress: React.FC<TransferProgressProps> = ({
                     <p>{formatEta(eta)}</p>
                 </div>
             </div>
+            {status === 'transferring' && <SpeedChart data={speedData} />}
         </div>
     );
 };

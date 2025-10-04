@@ -1,8 +1,10 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { RecoveredFile, FileType } from '../types';
 import { analyzeFileContent } from '../services/geminiService';
 import { CloseIcon } from './icons/Icons';
+import { formatBytes } from '../utils/formatters';
 
 interface PreviewModalProps {
   file: RecoveredFile;
@@ -56,9 +58,26 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ file, onClose }) => {
         </header>
         
         <div className="p-6 overflow-y-auto">
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg">File Details</h3>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                <strong className="text-gray-600 dark:text-gray-400">File Type:</strong>
+                <span>{file.type}</span>
+                <strong className="text-gray-600 dark:text-gray-400">Size:</strong>
+                <span>{formatBytes(file.size)}</span>
+                <strong className="text-gray-600 dark:text-gray-400">Recovery Chance:</strong>
+                <span>{file.recoveryChance}</span>
+                <strong className="text-gray-600 dark:text-gray-400">Original Path:</strong>
+                <span className="truncate">{file.path}</span>
+            </div>
+          </div>
+
           {file.type === FileType.Image && file.previewUrl && (
-            <div className="mb-4">
-              <img src={file.previewUrl} alt={`Preview of ${file.name}`} className="rounded-lg w-full h-auto object-contain max-h-80" />
+            <div className="mt-4">
+               <h3 className="font-semibold text-lg mb-2">Image Preview</h3>
+              <div className="mb-4">
+                <img src={file.previewUrl} alt={`Preview of ${file.name}`} className="rounded-lg w-full h-auto object-contain max-h-60" />
+              </div>
             </div>
           )}
 

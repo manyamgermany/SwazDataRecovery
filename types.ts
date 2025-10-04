@@ -5,6 +5,8 @@ export interface TransferHistoryEntry {
   date: number; // Stored as a timestamp
   status: 'Sent' | 'Received' | 'Canceled';
   fileType: string;
+  duration?: number; // in seconds
+  averageSpeed?: number; // in B/s
 }
 
 // Fix: Add missing type definitions used across the application.
@@ -34,7 +36,7 @@ export interface RecoveredFile {
   id: string;
   name: string;
   type: FileType;
-  size: string;
+  size: number;
   recoveryChance: 'High' | 'Medium' | 'Low';
   path: string;
   previewUrl?: string;

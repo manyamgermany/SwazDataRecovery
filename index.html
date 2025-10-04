@@ -5,6 +5,8 @@
     <link rel="icon" href="data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3e%3cpath fill='%23E63946' d='M50,90 L20,60 C10,50 10,20 40,10 L50,30 L60,10 C90,20 90,50 80,60 L50,90 Z'/%3e%3c/svg%3e" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Swaz Data Recovery Labs | P2P Transfer</title>
+    <!-- Polyfill for import maps to support a wider range of browsers, including Firefox -->
+    <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -40,6 +42,37 @@
         }
       }
     </script>
+    <style>
+      /* For consistent scrollbar styling across browsers */
+      /* Firefox */
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: #457B9D #F8F9FA;
+      }
+      .dark * {
+        scrollbar-color: #457B9D #1B1B1B;
+      }
+
+      /* Chrome, Edge, and Safari */
+      *::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      *::-webkit-scrollbar-track {
+        background: #F8F9FA;
+      }
+      .dark *::-webkit-scrollbar-track {
+        background: #1B1B1B;
+      }
+      *::-webkit-scrollbar-thumb {
+        background-color: #457B9D;
+        border-radius: 10px;
+        border: 2px solid #F8F9FA;
+      }
+      .dark *::-webkit-scrollbar-thumb {
+        border-color: #1B1B1B;
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {

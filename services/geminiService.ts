@@ -1,7 +1,9 @@
 
-import { GoogleGenAI, Chat } from "@google/genai";
+
+import { GoogleGenAI, Chat, FunctionDeclaration, Type } from "@google/genai";
 // Fix: Import types required for the new analyzeFileContent function.
 import { RecoveredFile, FileType } from "../types";
+import { formatBytes } from '../utils/formatters';
 
 // The API key MUST be obtained from environment variables
 const API_KEY = process.env.API_KEY;
@@ -40,20 +42,60 @@ const KNOWLEDGE_BASE = `
 - **Contact**: Users can contact us via the form on our "Contact" page for questions about the simulation, the file transfer tool, or for real data recovery inquiries.
 `;
 
+const captureUserDetailsDeclaration: FunctionDeclaration = {
+    name: 'capture_user_details',
+    description: 'Captures or updates user details for a support ticket.',
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            name: { type: Type.STRING, description: 'The user\'s full name.' },
+            email: { type: Type.STRING, description: 'The user\'s email address.' },
+            phone: { type: Type.STRING, description: 'The user\'s phone number.' },
+            problem_description: { type: Type.STRING, description: 'A summary of the user\'s issue.' },
+            consent: { type: Type.BOOLEAN, description: 'True if the user has given consent to collect their data.' },
+        },
+    },
+};
+
+const escalateToHumanDeclaration: FunctionDeclaration = {
+    name: 'escalate_to_human',
+    description: 'Flags the conversation for escalation to a human support agent.',
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            reason: { type: Type.STRING, description: 'The reason the user wants to speak to a human.' },
+        },
+    },
+};
+
 const systemInstruction = `You are "Swaz AI", a friendly and professional support assistant for Swaz Data Recovery Labs.
 
 **Your Core Directives:**
-1.  **Strictly Adhere to the Knowledge Base**: Your knowledge is exclusively limited to the information provided here. Do not invent services, pricing, or capabilities.
+1.  **Strictly Adhere to the Knowledge Base**: Your primary goal is to answer questions using ONLY the information provided here. Do not invent services, pricing, or capabilities.
     <KNOWLEDGE_BASE>
     ${KNOWLEDGE_BASE}
     </KNOWLEDGE_BASE>
 2.  **Maintain Your Persona**: You are helpful, reassuring, and professional. You are an AI assistant.
 3.  **Enforce Business Guardrails**:
-    - If a user asks about anything unrelated to Swaz Data Recovery Labs or our services (e.g., politics, math problems, general knowledge), you MUST politely decline and steer the conversation back. Example: "I can only assist with questions about Swaz Data Recovery Labs, our data recovery simulation, and our secure file transfer service. How can I help you with that?"
-    - Do NOT provide advice on how to perform real data recovery. Instead, explain what the simulation demonstrates and suggest they fill out our quote form for a real service inquiry.
-    - For file transfer issues, use the troubleshooting steps from the knowledge base.
-    - If a user expresses panic about data loss, be empathetic but remind them that this is a simulation tool to help them understand the process.
-4.  **Be Concise**: Provide clear, direct answers. Use formatting like lists if it improves clarity.
+    - If a user asks about anything unrelated to Swaz Data Recovery Labs, you MUST politely decline and steer the conversation back. Example: "I can only assist with questions about Swaz Data Recovery Labs. How can I help you with that?"
+    - Do NOT provide advice on how to perform real data recovery. Instead, explain what the simulation demonstrates and suggest they fill out our quote form.
+
+**Support Ticket Workflow:**
+- If you cannot answer a user's question, or if they describe a specific data loss problem, your secondary goal is to create a support ticket.
+- **Step 1: Obtain Consent.** Before asking for ANY personal information, you MUST ask for their consent. Say something like: "To create a support ticket for you, I'll need to collect some information. Is that okay?" Do not proceed without a clear 'yes' or agreement. If they agree, call \`capture_user_details({ consent: true })\`.
+- **Step 2: Gather Information.** Once consent is given, ask for the following, **one question at a time**:
+    1.  Full Name (Required)
+    2.  Email Address (Required)
+    3.  A brief description of the problem (Required)
+    4.  Phone Number (Optional)
+- **Step 3: Use Tools.** As the user provides information, use the \`capture_user_details\` tool to record it. You can capture multiple details at once if the user provides them together.
+- **Step 4: Validate Input.**
+    - **Email:** An email must contain an "@" symbol and a ".". If it doesn't, gently ask the user to check it. e.g., "That email address doesn't look quite right. Could you please double-check it?"
+    - **Phone:** A phone number should primarily contain numbers, and optionally symbols like "+", "(", ")", "-". If it seems invalid, gently ask for clarification.
+- **Step 5: Completion.** Once you have the required information (Name, Email, Problem Description), inform the user that the details have been collected and will be reviewed for submission. Say: "Thank you! I've collected the following details. Please review them in the window and confirm submission." Then, you must stop talking and wait for the user to use the confirmation UI.
+
+**Human Escalation:**
+- If the user explicitly asks to speak to a "human", "person", or "agent", immediately use the \`escalate_to_human\` tool. You can provide a brief, reassuring message like, "Of course. I am flagging this conversation for a human agent now."
 `;
 
 let chat: Chat | null = null;
@@ -64,14 +106,15 @@ const initializeChat = () => {
         model: 'gemini-2.5-flash',
         config: {
             systemInstruction: systemInstruction,
+            tools: [{ functionDeclarations: [captureUserDetailsDeclaration, escalateToHumanDeclaration] }],
         },
     });
 };
 
 
-export const getAiChatResponse = async (message: string, history: ChatMessage[]): Promise<string> => {
+export const getAiChatResponse = async (message: string, history: ChatMessage[]): Promise<{ text: string; functionCalls?: any[] }> => {
     if (!API_KEY) {
-        return Promise.resolve("The AI chat agent is currently unavailable because the API key is not configured.");
+        return Promise.resolve({ text: "The AI chat agent is currently unavailable because the API key is not configured."});
     }
 
     try {
@@ -86,15 +129,18 @@ export const getAiChatResponse = async (message: string, history: ChatMessage[])
         }
        
         const response = await chat.sendMessage({ message });
-        return response.text;
+        return {
+            text: response.text,
+            functionCalls: response.functionCalls,
+        };
 
     } catch (error) {
         console.error("Error getting AI response:", error);
         chat = null; // Reset chat on error
         if (error instanceof Error) {
-            return `I'm sorry, but I encountered an error: ${error.message}`;
+            return { text: `I'm sorry, but I encountered an error: ${error.message}` };
         }
-        return "I'm sorry, but I'm unable to respond at the moment. Please try again later.";
+        return { text: "I'm sorry, but I'm unable to respond at the moment. Please try again later." };
     }
 };
 
@@ -108,7 +154,7 @@ export const analyzeFileContent = async (file: RecoveredFile): Promise<string> =
         let prompt = `Analyze the following metadata for a simulated recovered file. Based on the information, provide a brief, one-sentence summary of its likely content and condition. Be creative and reassuring.
 - File Name: ${file.name}
 - File Type: ${file.type}
-- Size: ${file.size}
+- Size: ${formatBytes(file.size)}
 - Path: ${file.path}
 - Simulated Recovery Chance: ${file.recoveryChance}`;
 

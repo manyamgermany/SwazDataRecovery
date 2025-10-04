@@ -14,13 +14,14 @@ function bufferToHex(buffer: ArrayBuffer): string {
 // --- Hashing ---
 
 /**
- * Calculates the SHA-256 hash of a File or ArrayBuffer.
+ * Calculates the SHA-256 hash of a File, Blob, or ArrayBuffer.
  * This is used to verify the integrity of both individual chunks and the full file.
- * @param data The File or ArrayBuffer to hash.
+ * @param data The File, Blob, or ArrayBuffer to hash.
  * @returns A promise that resolves with the SHA-256 hash as a hex string.
  */
-export async function calculateSHA256(data: File | ArrayBuffer): Promise<string> {
-  const buffer = data instanceof File ? await data.arrayBuffer() : data;
+// Fix: Update function signature to accept Blob type and adjust implementation to handle it.
+export async function calculateSHA256(data: File | ArrayBuffer | Blob): Promise<string> {
+  const buffer = data instanceof ArrayBuffer ? data : await data.arrayBuffer();
   try {
     const hashBuffer = await window.crypto.subtle.digest('SHA-256', buffer);
     return bufferToHex(hashBuffer);

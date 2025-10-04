@@ -1,4 +1,3 @@
-
 import { WebRTCConnectionManager } from './WebRTCConnectionManager';
 import { calculateSHA256 } from './cryptoService';
 import { EncryptionPipeline } from './EncryptionPipeline';
@@ -6,6 +5,11 @@ import { EncryptionPipeline } from './EncryptionPipeline';
 // Constants for backpressure mechanism
 const HIGH_WATER_MARK = 15 * 1024 * 1024; // 15 MB buffer
 const LOW_WATER_MARK = 8 * 1024 * 1024; // 8 MB buffer
+
+// Constants for adaptive chunk sizing
+const MIN_CHUNK_SIZE = 16 * 1024;   // 16 KB
+const DEFAULT_CHUNK_SIZE = 64 * 1024; // 64 KB
+const MAX_CHUNK_SIZE = 256 * 1024; // 256 KB
 
 // Type definitions for the file transfer protocol
 type FileMetadata = {
@@ -23,13 +27,26 @@ type ChunkMetadata = {
 };
 type ProtocolMessage = 
     | { type: 'file-metadata', payload: FileMetadata }
-    | { type: 'chunk-metadata', payload: ChunkMetadata } // Explicitly for receiver side type guarding
+    | { type: 'chunk-metadata', payload: ChunkMetadata }
+    | { type: 'transfer-complete', payload: { fileId: string } } // Sender -> Receiver
+    | { type: 'request-chunks', payload: { fileId: string; indexes: number[] } } // Receiver -> Sender
     | { type: 'file-received-ack', payload: { fileId: string } };
 
 // Callbacks for the UI to subscribe to
-export type FileProgress = { fileId: string; fileName: string; progress: number; };
+export type FileProgress = {
+    fileId: string;
+    fileName: string;
+    fileSize: number;
+    fileType: string;
+    progress: number;
+    transferredChunks: number;
+    totalChunks: number;
+};
 export type ReceivedFile = { name: string; type: string; size: number; url: string; };
-export type TransferStatus = { type: 'info' | 'error' | 'success'; message: string; };
+export type TransferStatus = 
+    | { type: 'info' | 'success'; message: string; }
+    | { type: 'error'; message: string; code?: 'ENCRYPTION_FAILED' | 'DECRYPTION_FAILED' | 'CHECKSUM_MISMATCH'; context?: { fileName?: string; fileId?: string; chunkIndex?: number }};
+
 
 type FileTransferManagerCallbacks = {
     onStatusUpdate: (status: TransferStatus) => void;
@@ -64,7 +81,8 @@ export class FileTransferManager {
     private awaitingChunkDataFor: ChunkMetadata | null = null;
 
     private isPaused = false;
-    private readonly chunkSize = 64 * 1024; // 64 KB chunks
+    private chunkSize = DEFAULT_CHUNK_SIZE;
+    private consecutiveBufferWaits = 0;
 
     constructor(webRTCManager: WebRTCConnectionManager, callbacks: FileTransferManagerCallbacks) {
         this.webRTCManager = webRTCManager;
@@ -81,7 +99,6 @@ export class FileTransferManager {
         this.dataChannel.onmessage = this.handleDataChannelMessage.bind(this);
         this.dataChannel.onopen = () => this.callbacks.onStatusUpdate({ type: 'info', message: 'Data channel is open.' });
         this.dataChannel.onclose = () => this.callbacks.onStatusUpdate({ type: 'info', message: 'Data channel has closed.' });
-        // Set threshold for backpressure events
         this.dataChannel.bufferedAmountLowThreshold = LOW_WATER_MARK;
     }
 
@@ -94,7 +111,6 @@ export class FileTransferManager {
         if (!this.sendingFileState || !this.isPaused) return;
         this.isPaused = false;
         this.callbacks.onStatusUpdate({ type: 'info', message: 'Transfer resumed.' });
-        // The streaming loop will automatically continue
     }
 
     public async sendFiles(files: File[]) {
@@ -117,6 +133,8 @@ export class FileTransferManager {
         }
 
         const file = this.filesToSend.shift()!;
+        // Reset chunk size for each new file
+        this.chunkSize = DEFAULT_CHUNK_SIZE;
         const totalChunks = Math.ceil(file.size / this.chunkSize);
         const fileId = `${file.name}-${file.size}-${Date.now()}`;
 
@@ -142,47 +160,88 @@ export class FileTransferManager {
         if (!this.sendingFileState || !this.dataChannel || !this.encryptionPipeline) return;
 
         const { file, metadata } = this.sendingFileState;
-        const { totalChunks, fileId, name } = metadata;
+        const { fileId, name } = metadata;
+        const totalChunks = Math.ceil(file.size / this.chunkSize);
+        this.sendingFileState.metadata.totalChunks = totalChunks;
 
         for (let i = this.sendingFileState.sentChunksCount; i < totalChunks; i++) {
-            // Handle pausing
             while (this.isPaused) {
                 await new Promise(resolve => setTimeout(resolve, 200));
             }
 
-            // Handle cancellation (e.g., peer disconnects and state is reset)
             if (!this.sendingFileState || this.sendingFileState.metadata.fileId !== fileId) {
                 this.callbacks.onStatusUpdate({ type: 'info', message: `Transfer of ${name} was cancelled.` });
                 return;
             }
 
-            // Handle backpressure to adapt to network conditions
             if (this.dataChannel.bufferedAmount > HIGH_WATER_MARK) {
                 await this.waitForBufferToClear();
+                this.consecutiveBufferWaits++;
+                if (this.consecutiveBufferWaits > 2) {
+                    this.chunkSize = Math.max(MIN_CHUNK_SIZE, this.chunkSize / 2);
+                    this.consecutiveBufferWaits = 0;
+                }
+            } else {
+                this.consecutiveBufferWaits = 0;
+                 if (this.dataChannel.bufferedAmount < LOW_WATER_MARK / 2) {
+                    this.chunkSize = Math.min(MAX_CHUNK_SIZE, Math.floor(this.chunkSize * 1.1));
+                }
             }
-
-            const start = i * this.chunkSize;
-            const end = start + this.chunkSize;
-            const chunkBlob = file.slice(start, end);
-            const chunkData = await chunkBlob.arrayBuffer();
-
-            const chunkMetadata: ChunkMetadata = { fileId, chunkIndex: i, size: chunkData.byteLength };
-
-            const encryptedChunk = await this.encryptionPipeline.encrypt(chunkData);
-            if (!encryptedChunk) {
-                this.callbacks.onStatusUpdate({ type: 'error', message: `Encryption failed for chunk ${i + 1} of ${name}.` });
-                this.webRTCManager.disconnect(); // Fatal error, kill connection
-                return;
-            }
-
-            this.sendMessage({ type: 'chunk-metadata', payload: chunkMetadata });
-            this.dataChannel.send(encryptedChunk);
-
-            this.sendingFileState.sentChunksCount++;
             
-            const progress = Math.round((this.sendingFileState.sentChunksCount / totalChunks) * 100);
-            this.callbacks.onFileProgress({ fileId, fileName: name, progress });
+            await this.sendChunk(i, totalChunks);
         }
+        
+        // After sending all chunks, notify the receiver
+        this.sendMessage({ type: 'transfer-complete', payload: { fileId } });
+    }
+
+    private async resendChunks(fileId: string, indexes: number[]) {
+         if (!this.sendingFileState || this.sendingFileState.metadata.fileId !== fileId) return;
+         this.callbacks.onStatusUpdate({ type: 'info', message: `Resending ${indexes.length} missing chunks for ${this.sendingFileState.file.name}...` });
+         const totalChunks = this.sendingFileState.metadata.totalChunks;
+         for (const index of indexes) {
+              await this.sendChunk(index, totalChunks);
+         }
+         this.sendMessage({ type: 'transfer-complete', payload: { fileId } });
+    }
+    
+    private async sendChunk(chunkIndex: number, totalChunks: number) {
+        if (!this.sendingFileState || !this.dataChannel || !this.encryptionPipeline) return;
+        
+        const { file, metadata } = this.sendingFileState;
+        const { fileId, name, type } = metadata;
+
+        const start = chunkIndex * this.chunkSize;
+        const end = start + this.chunkSize;
+        const chunkBlob = file.slice(start, end);
+        const chunkData = await chunkBlob.arrayBuffer();
+
+        const chunkMetadata: ChunkMetadata = { fileId, chunkIndex, size: chunkData.byteLength };
+
+        const encryptedChunk = await this.encryptionPipeline.encrypt(chunkData);
+        if (!encryptedChunk) {
+            this.callbacks.onStatusUpdate({ type: 'error', message: `Encryption failed for chunk ${chunkIndex + 1} of ${name}.`, code: 'ENCRYPTION_FAILED', context: { fileName: name, fileId, chunkIndex } });
+            this.webRTCManager.disconnect();
+            return;
+        }
+
+        this.sendMessage({ type: 'chunk-metadata', payload: chunkMetadata });
+        this.dataChannel.send(encryptedChunk);
+
+        if (chunkIndex >= this.sendingFileState.sentChunksCount) {
+             this.sendingFileState.sentChunksCount++;
+        }
+       
+        const progress = Math.round((this.sendingFileState.sentChunksCount / totalChunks) * 100);
+        this.callbacks.onFileProgress({
+            fileId,
+            fileName: name,
+            fileSize: file.size,
+            fileType: type,
+            progress,
+            transferredChunks: this.sendingFileState.sentChunksCount,
+            totalChunks,
+        });
     }
 
     private waitForBufferToClear(): Promise<void> {
@@ -191,7 +250,6 @@ export class FileTransferManager {
                 resolve();
                 return;
             }
-            // This event fires when the buffer drops below the `bufferedAmountLowThreshold`
             const onBufferLow = () => {
                 this.dataChannel?.removeEventListener('bufferedamountlow', onBufferLow);
                 resolve();
@@ -201,17 +259,26 @@ export class FileTransferManager {
     }
 
     private async handleDataChannelMessage(event: MessageEvent) {
-        // Handle binary data (encrypted chunks)
         if (event.data instanceof ArrayBuffer) {
             if (this.awaitingChunkDataFor && this.encryptionPipeline) {
                 const chunkMetadataContext = this.awaitingChunkDataFor;
-                this.awaitingChunkDataFor = null; // Consume the context
+                this.awaitingChunkDataFor = null;
 
                 const decryptedData = await this.encryptionPipeline.decrypt(event.data);
                 if (decryptedData) {
                     this.handleChunkData(decryptedData, chunkMetadataContext);
                 } else {
-                    this.callbacks.onStatusUpdate({ type: 'error', message: `Decryption failed for chunk ${chunkMetadataContext.chunkIndex}.` });
+                    const fileState = this.receivingFiles.get(chunkMetadataContext.fileId);
+                    this.callbacks.onStatusUpdate({ 
+                        type: 'error', 
+                        message: `Decryption failed for a chunk of ${fileState?.metadata.name || 'a file'}.`, 
+                        code: 'DECRYPTION_FAILED', 
+                        context: { 
+                            fileName: fileState?.metadata.name,
+                            fileId: chunkMetadataContext.fileId,
+                            chunkIndex: chunkMetadataContext.chunkIndex 
+                        } 
+                    });
                 }
             } else {
                  console.warn('Received unexpected binary data without preceding metadata.');
@@ -219,12 +286,13 @@ export class FileTransferManager {
             return;
         }
 
-        // Handle string data (JSON protocol messages)
         try {
             const message = JSON.parse(event.data) as ProtocolMessage;
             switch (message.type) {
                 case 'file-metadata': this.handleFileMetadata(message.payload); break;
                 case 'chunk-metadata': this.awaitingChunkDataFor = message.payload; break;
+                case 'transfer-complete': this.handleTransferComplete(message.payload.fileId); break;
+                case 'request-chunks': this.resendChunks(message.payload.fileId, message.payload.indexes); break;
                 case 'file-received-ack': this.handleFileReceivedAck(message.payload.fileId); break;
                 default: console.warn('Unknown message type received in data channel:', (message as any).type);
             }
@@ -240,13 +308,29 @@ export class FileTransferManager {
             receivedChunksCount: 0
         });
         this.callbacks.onStatusUpdate({ type: 'info', message: `Receiving metadata for ${metadata.name}` });
-        this.callbacks.onFileProgress({ fileId: metadata.fileId, fileName: metadata.name, progress: 0 });
+        this.callbacks.onFileProgress({
+            fileId: metadata.fileId,
+            fileName: metadata.name,
+            fileSize: metadata.size,
+            fileType: metadata.type,
+            progress: 0,
+            transferredChunks: 0,
+            totalChunks: metadata.totalChunks,
+        });
     }
 
     private async handleChunkData(decryptedChunkData: ArrayBuffer, metadata: ChunkMetadata) {
         const { fileId, chunkIndex } = metadata;
         const fileState = this.receivingFiles.get(fileId);
         if (!fileState) return;
+        
+        if (fileState.metadata.totalChunks <= chunkIndex) {
+            // This can happen if chunk size was adapted mid-transfer
+            const oldChunks = fileState.chunks;
+            fileState.chunks = new Array(chunkIndex + 1).fill(null);
+            fileState.chunks.splice(0, oldChunks.length, ...oldChunks);
+            fileState.metadata.totalChunks = chunkIndex + 1;
+        }
 
         if (!fileState.chunks[chunkIndex]) {
             fileState.chunks[chunkIndex] = decryptedChunkData;
@@ -254,23 +338,42 @@ export class FileTransferManager {
         }
         
         const progress = Math.round((fileState.receivedChunksCount / fileState.metadata.totalChunks) * 100);
-        this.callbacks.onFileProgress({ fileId, fileName: fileState.metadata.name, progress });
+        this.callbacks.onFileProgress({
+            fileId,
+            fileName: fileState.metadata.name,
+            fileSize: fileState.metadata.size,
+            fileType: fileState.metadata.type,
+            progress,
+            transferredChunks: fileState.receivedChunksCount,
+            totalChunks: fileState.metadata.totalChunks,
+        });
+    }
+    
+    private handleTransferComplete(fileId: string) {
+        const fileState = this.receivingFiles.get(fileId);
+        if (!fileState) return;
 
-        if (fileState.receivedChunksCount === fileState.metadata.totalChunks) {
+        const missingChunks = fileState.chunks
+            .map((chunk, index) => (chunk === null ? index : -1))
+            .filter(index => index !== -1);
+            
+        if (missingChunks.length > 0) {
+            this.callbacks.onStatusUpdate({ type: 'info', message: `Found ${missingChunks.length} missing chunks. Requesting re-transmission...`});
+            this.sendMessage({ type: 'request-chunks', payload: { fileId, indexes: missingChunks } });
+        } else {
             this.reconstructFile(fileId);
         }
     }
 
     private async reconstructFile(fileId: string) {
         const fileState = this.receivingFiles.get(fileId);
-        if (!fileState || fileState.chunks.includes(null)) {
+        if (!fileState || fileState.chunks.some(c => c === null)) {
             this.callbacks.onStatusUpdate({ type: 'error', message: `File reconstruction for ${fileState?.metadata.name} failed: missing chunks.` });
             return;
         };
 
         const fileBlob = new Blob(fileState.chunks as BlobPart[]);
-        const fileBuffer = await fileBlob.arrayBuffer();
-        const fullFileChecksum = await calculateSHA256(fileBuffer);
+        const fullFileChecksum = await calculateSHA256(fileBlob);
 
         if (fullFileChecksum === fileState.metadata.fullFileChecksum) {
             const url = URL.createObjectURL(fileBlob);
@@ -283,7 +386,7 @@ export class FileTransferManager {
             this.sendMessage({ type: 'file-received-ack', payload: { fileId } });
             this.receivingFiles.delete(fileId);
         } else {
-            this.callbacks.onStatusUpdate({ type: 'error', message: `Final file checksum mismatch for ${fileState.metadata.name}. Transfer failed.` });
+            this.callbacks.onStatusUpdate({ type: 'error', message: `Final file checksum mismatch for ${fileState.metadata.name}. Transfer failed.`, code: 'CHECKSUM_MISMATCH', context: { fileName: fileState.metadata.name, fileId } });
         }
     }
 

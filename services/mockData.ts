@@ -1,4 +1,5 @@
 
+
 import { Drive, DriveType, RecoveredFile, FileType } from '../types';
 
 export const mockDrives: Drive[] = [
@@ -35,7 +36,7 @@ export const simulateFileRecovery = (drive: Drive): Promise<RecoveredFile[]> => 
       const randomType = getRandomElement(typeValues);
       const chanceValue = Math.random();
       const recoveryChance = chanceValue > 0.7 ? 'High' : chanceValue > 0.3 ? 'Medium' : 'Low';
-      const size = `${(Math.random() * 100).toFixed(2)} MB`;
+      const size = Math.floor(Math.random() * 100 * 1024 * 1024); // 0 to 100MB
       const name = getRandomElement(fileNames[randomType]);
       const id = `${drive.id}-file-${i}-${Date.now()}`;
 
