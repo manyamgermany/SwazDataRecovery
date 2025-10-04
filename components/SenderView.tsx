@@ -103,35 +103,39 @@ const FileDropzone: React.FC<{onFilesSelected: (files: File[]) => void}> = ({ on
         e.preventDefault();
         e.stopPropagation();
         setIsDragActive(false);
-        const droppedFiles: File[] = [];
-        const promises: Promise<File | File[] | null>[] = [];
-    
-        if (e.dataTransfer.items) {
-             for (const item of e.dataTransfer.items) {
-                if (typeof item.webkitGetAsEntry === 'function') {
-                    const entry = item.webkitGetAsEntry();
-                    if (entry) {
-                        if (entry.isDirectory) {
-                            promises.push(getFilesInDirectory(entry as FileSystemDirectoryEntry));
-                        } else if (entry.isFile) {
-                            promises.push(new Promise<File>((resolve, reject) => (entry as FileSystemFileEntry).file(resolve, reject)));
+        try {
+            const droppedFiles: File[] = [];
+            const promises: Promise<File | File[] | null>[] = [];
+        
+            if (e.dataTransfer.items) {
+                 for (const item of e.dataTransfer.items) {
+                    if (typeof item.webkitGetAsEntry === 'function') {
+                        const entry = item.webkitGetAsEntry();
+                        if (entry) {
+                            if (entry.isDirectory) {
+                                promises.push(getFilesInDirectory(entry as FileSystemDirectoryEntry));
+                            } else if (entry.isFile) {
+                                promises.push(new Promise<File>((resolve, reject) => (entry as FileSystemFileEntry).file(resolve, reject)));
+                            }
+                        }
+                    } else {
+                        const file = item.getAsFile();
+                        if (file) {
+                            promises.push(Promise.resolve(file));
                         }
                     }
-                } else {
-                    const file = item.getAsFile();
-                    if (file) {
-                        promises.push(Promise.resolve(file));
-                    }
                 }
+                const results = await Promise.all(promises);
+                results.flat().forEach(file => file && droppedFiles.push(file as File));
+            } else {
+                 droppedFiles.push(...Array.from(e.dataTransfer.files));
             }
-            const results = await Promise.all(promises);
-            results.flat().forEach(file => file && droppedFiles.push(file as File));
-        } else {
-             droppedFiles.push(...Array.from(e.dataTransfer.files));
-        }
-        
-        if (droppedFiles.length > 0) {
-            onFilesSelected(droppedFiles);
+            
+            if (droppedFiles.length > 0) {
+                onFilesSelected(droppedFiles);
+            }
+        } catch (error) {
+            console.error("Error processing dropped files:", error);
         }
     };
 

@@ -52,7 +52,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                     className={`px-3 py-1.5 rounded-md transition-all duration-300 active:scale-95 ${
                         link.label === 'P2P File Transfer' 
                         ? 'font-bold text-primary-light bg-primary-light/10 hover:bg-primary-light/20' 
-                        : 'font-semibold text-text-light dark:text-text-dark hover:text-accent dark:hover:text-accent-light'
+                        : 'font-semibold text-text-light dark:text-text-dark hover:text-accent dark:hover:text-accent'
                     }`}
                 >
                     {link.label}
