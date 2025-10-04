@@ -9,7 +9,7 @@ interface HeaderProps {
 
 const navLinks: { view: AppView, label: string }[] = [
     { view: 'services', label: 'Services' },
-    { view: 'transfer', label: 'File Transfer' },
+    { view: 'transfer', label: 'P2P File Transfer' },
     { view: 'pricing', label: 'Pricing' },
     { view: 'testimonials', label: 'Testimonials' },
     { view: 'faq', label: 'FAQ' },
@@ -50,7 +50,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                     href={`#${link.view}`}
                     onClick={(e) => handleNavClick(e, link.view)}
                     className={`px-3 py-1.5 rounded-md transition-all duration-300 active:scale-95 ${
-                        link.label === 'File Transfer' 
+                        link.label === 'P2P File Transfer' 
                         ? 'font-bold text-primary-light bg-primary-light/10 hover:bg-primary-light/20' 
                         : 'font-semibold text-text-light dark:text-text-dark hover:text-accent dark:hover:text-accent-light'
                     }`}
@@ -97,7 +97,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                     href={`#${link.view}`}
                     onClick={(e) => handleNavClick(e, link.view)}
                     className={`text-3xl font-bold transition-all active:scale-95 ${
-                        link.label === 'File Transfer'
+                        link.label === 'P2P File Transfer'
                         ? 'text-primary-light'
                         : 'text-text-light dark:text-text-dark hover:text-accent'
                     }`}
