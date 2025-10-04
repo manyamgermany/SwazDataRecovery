@@ -45,4 +45,5 @@ export interface TransferHistoryEntry {
   fileSize: number;
   date: number; // Stored as a timestamp
   status: 'Sent' | 'Received' | 'Canceled';
+  fileType: string;
 }

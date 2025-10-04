@@ -1,8 +1,22 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import { FileProgress, TransferStatus } from '../services/webrtcService';
 import { TransferState } from './FileTransferPage';
 import { formatBytes } from '../utils/formatters';
-import { UploadCloudIcon, DocumentIcon, XCircleIcon, CopyIcon, CheckIcon, ShieldCheckIcon, PauseIcon, PlayIcon, LinkIcon } from './icons/Icons';
+import { 
+    UploadCloudIcon, 
+    DocumentIcon, 
+    XCircleIcon, 
+    CopyIcon, 
+    CheckIcon, 
+    ShieldCheckIcon, 
+    PauseIcon, 
+    PlayIcon, 
+    LinkIcon,
+    ImageIcon,
+    VideoIcon,
+    AudioIcon
+} from './icons/Icons';
 import TransferProgress from './TransferProgress';
 
 interface SenderViewProps {
@@ -20,6 +34,20 @@ interface SenderViewProps {
     eta: number;
     status: TransferStatus;
 }
+
+const getFileTypeIcon = (mimeType: string) => {
+    const commonClasses = "w-8 h-8 flex-shrink-0 text-accent";
+    if (mimeType.startsWith('image/')) {
+        return <ImageIcon className={commonClasses} />;
+    }
+    if (mimeType.startsWith('video/')) {
+        return <VideoIcon className={commonClasses} />;
+    }
+    if (mimeType.startsWith('audio/')) {
+        return <AudioIcon className={commonClasses} />;
+    }
+    return <DocumentIcon className={commonClasses} />;
+};
 
 const FileDropzone: React.FC<{onFilesSelected: (files: File[]) => void}> = ({ onFilesSelected }) => {
     const [isDragActive, setIsDragActive] = useState(false);
@@ -75,11 +103,19 @@ const SenderView: React.FC<SenderViewProps> = ({
     const [isCopied, setIsCopied] = useState(false);
 
     const handleFilesSelected = useCallback((newFiles: File[]) => {
-        setSelectedFiles(prev => [...prev, ...newFiles]);
-    }, []);
+        // Prevent adding duplicates
+        const uniqueNewFiles = newFiles.filter(newFile => 
+            !selectedFiles.some(existingFile => 
+                existingFile.name === newFile.name && 
+                existingFile.size === newFile.size && 
+                existingFile.lastModified === newFile.lastModified
+            )
+        );
+        setSelectedFiles(prev => [...prev, ...uniqueNewFiles]);
+    }, [selectedFiles]);
 
-    const handleRemoveFile = (fileName: string) => {
-        setSelectedFiles(prev => prev.filter(f => f.name !== fileName));
+    const handleRemoveFile = (indexToRemove: number) => {
+        setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
     };
 
     const handleStart = () => {
@@ -96,6 +132,8 @@ const SenderView: React.FC<SenderViewProps> = ({
     };
     
     const totalSize = useMemo(() => files.reduce((sum, f) => sum + f.size, 0), [files]);
+    const totalSelectedSize = useMemo(() => selectedFiles.reduce((sum, f) => sum + f.size, 0), [selectedFiles]);
+
     const totalTransferred = useMemo(() => {
         return Object.values(progress).reduce((sum, p) => {
             const file = files.find(f => f.name === p.fileName);
@@ -103,36 +141,48 @@ const SenderView: React.FC<SenderViewProps> = ({
         }, 0);
     }, [progress, files]);
 
-    if (transferState === 'idle' || (transferState === 'transferring' && files.length === 0)) {
+    if (transferState === 'idle') {
         return (
             <div className="w-full max-w-lg text-center">
                 <FileDropzone onFilesSelected={handleFilesSelected} />
                 {selectedFiles.length > 0 && (
-                    <div className="mt-6 w-full text-left">
-                        <h3 className="font-bold mb-2">Selected Files:</h3>
-                        <div className="space-y-2 max-h-48 overflow-y-auto p-2 bg-gray-100 dark:bg-gray-900 rounded-md">
-                            {selectedFiles.map(file => (
-                                <div key={file.name} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded">
-                                    <div className="flex items-center gap-2 truncate">
-                                        <DocumentIcon className="w-5 h-5 flex-shrink-0 text-accent"/>
-                                        <span className="truncate text-sm">{file.name}</span>
-                                        <span className="text-xs text-gray-500 flex-shrink-0">({formatBytes(file.size)})</span>
+                    <div className="mt-6 w-full text-left animate-slide-in">
+                        <h3 className="font-bold text-lg mb-2">Files to Send</h3>
+                        <div className="space-y-2 max-h-60 overflow-y-auto p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-700">
+                            {selectedFiles.map((file, index) => (
+                                <div key={`${file.name}-${file.lastModified}-${index}`} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-md shadow-sm">
+                                    <div className="flex items-center gap-3 truncate min-w-0">
+                                        {getFileTypeIcon(file.type)}
+                                        <div className="truncate">
+                                            <span className="truncate text-sm font-semibold text-text-light dark:text-text-dark" title={file.name}>{file.name}</span>
+                                            <span className="text-xs text-gray-500 block">{formatBytes(file.size)}</span>
+                                        </div>
                                     </div>
-                                    <button onClick={() => handleRemoveFile(file.name)}>
-                                        <XCircleIcon className="w-5 h-5 text-gray-400 hover:text-red-500"/>
+                                    <button 
+                                        onClick={() => handleRemoveFile(index)}
+                                        className="p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-colors flex-shrink-0 ml-2"
+                                        aria-label={`Remove ${file.name}`}
+                                    >
+                                        <XCircleIcon className="w-6 h-6"/>
                                     </button>
                                 </div>
                             ))}
                         </div>
+                        
+                        <div className="mt-4 flex justify-between items-center text-sm font-medium text-gray-600 dark:text-gray-400 px-1">
+                           <p>Total files: <span className="font-bold text-text-light dark:text-text-dark">{selectedFiles.length}</span></p>
+                           <p>Total size: <span className="font-bold text-text-light dark:text-text-dark">{formatBytes(totalSelectedSize)}</span></p>
+                        </div>
+                        
                         <button onClick={handleStart} className="mt-4 w-full px-6 py-3 bg-primary-light text-white font-bold rounded-lg shadow-md hover:bg-secondary-light transition-colors">
-                           {`Create Secure Room & Send ${selectedFiles.length} File(s)`}
+                           Create Secure Room & Send
                         </button>
                     </div>
                 )}
             </div>
         );
     }
-    
+
     return (
         <div className="w-full max-w-2xl text-center">
              <div className="flex items-center justify-center gap-2 mb-2">
@@ -157,7 +207,8 @@ const SenderView: React.FC<SenderViewProps> = ({
                 currentSpeed={transferSpeed}
                 averageSpeed={averageSpeed}
                 eta={eta}
-                status={transferState === 'done' ? 'completed' : transferState}
+                // Fix: Map 'connecting' state to 'transferring' to match the 'TransferStatus' type expected by TransferProgress.
+                status={transferState === 'done' ? 'completed' : transferState === 'connecting' ? 'transferring' : transferState}
             />
 
             <div className="space-y-2 max-h-48 overflow-y-auto p-2 border-y border-gray-200 dark:border-gray-700 mt-4">

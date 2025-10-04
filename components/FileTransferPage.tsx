@@ -9,14 +9,22 @@ import { TransferHistoryEntry } from '../types';
 import { getHistory, addHistoryEntry, clearHistory } from '../utils/history';
 import TransferHistory from './TransferHistory';
 
-const SIGNALING_SERVER_URL = 'ws://localhost:8080';
+const getSignalingServerUrl = (): string => {
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  // Construct the URL using the current page's hostname and port 8080.
+  // This is more robust for cloud development environments than 'localhost'.
+  const host = window.location.hostname;
+  return `${protocol}://${host}:8080`;
+};
+
+const SIGNALING_SERVER_URL = getSignalingServerUrl();
 const ICE_SERVERS = { iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
 ]};
 
-export type TransferState = 'idle' | 'transferring' | 'paused' | 'done' | 'error';
+export type TransferState = 'idle' | 'connecting' | 'transferring' | 'paused' | 'done' | 'error';
 type View = 'initial' | 'host' | 'receiver';
 
 const FileTransferPage: React.FC = () => {
@@ -115,7 +123,7 @@ const FileTransferPage: React.FC = () => {
         ws.current = new WebSocket(SIGNALING_SERVER_URL);
         ws.current.onopen = onOpenCallback;
         ws.current.onmessage = handleSignalingMessage;
-        ws.current.onerror = () => setStatus({ type: 'error', message: 'Signaling server connection error. Is it running?' });
+        ws.current.onerror = () => setStatus({ type: 'error', message: 'Signaling server connection error. Please ensure it is running and accessible.' });
         ws.current.onclose = () => { if (peerConnected) setStatus({ type: 'error', message: 'Signaling server disconnected.' }); };
     };
 
@@ -136,7 +144,9 @@ const FileTransferPage: React.FC = () => {
                 if (['disconnected', 'failed', 'closed'].includes(state)) {
                     setPeerConnected(false);
                     setStatus({ type: 'error', message: 'Peer has disconnected.' });
-                    setTransferState('error');
+                    if (transferState !== 'done') {
+                        setTransferState('error');
+                    }
                 }
             },
             onIceCandidate: (candidate) => sendMessage('ice-candidate', { candidate }),
@@ -152,6 +162,7 @@ const FileTransferPage: React.FC = () => {
                     fileName: file.name,
                     fileSize: file.size,
                     status: 'Received',
+                    fileType: file.type,
                 });
                 setHistory(newHistory);
             },
@@ -160,6 +171,7 @@ const FileTransferPage: React.FC = () => {
                     fileName: file.name,
                     fileSize: file.size,
                     status: 'Sent',
+                    fileType: file.type,
                 });
                 setHistory(newHistory);
             }
@@ -225,9 +237,12 @@ const FileTransferPage: React.FC = () => {
         setFilesToSend(selectedFiles);
         setTransferStartTime(null);
         setAverageSpeed(0);
+        
         initializeModules();
+        
+        setTransferState('connecting');
+        setStatus({ type: 'info', message: 'Creating secure room...' });
         connectWebSocket(() => sendMessage('join-room', {}));
-        setView('host');
     };
 
     const handleStartReceiving = () => {
@@ -250,7 +265,7 @@ const FileTransferPage: React.FC = () => {
     };
 
     const handleCancelTransfer = () => {
-        if (isSender.current && (transferState === 'transferring' || transferState === 'paused') && filesToSend.length > 0) {
+        if (isSender.current && ['connecting', 'transferring', 'paused'].includes(transferState) && filesToSend.length > 0) {
             let updatedHistory: TransferHistoryEntry[] | undefined;
             const completedFiles = new Set(Object.values(progress).filter(p => p.progress === 100).map(p => p.fileName));
             filesToSend.forEach(file => {
@@ -258,7 +273,8 @@ const FileTransferPage: React.FC = () => {
                      updatedHistory = addHistoryEntry({
                         fileName: file.name,
                         fileSize: file.size,
-                        status: 'Canceled'
+                        status: 'Canceled',
+                        fileType: file.type,
                     });
                  }
             });

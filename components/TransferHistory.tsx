@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
 import { TransferHistoryEntry } from '../types';
 import { formatBytes } from '../utils/formatters';
-import { ChevronDownIcon, HistoryIcon, TrashIcon, ArrowUpCircleIcon, ArrowDownCircleIcon, XCircleIcon } from './icons/Icons';
+import { 
+    ChevronDownIcon, 
+    HistoryIcon, 
+    TrashIcon, 
+    ArrowUpCircleIcon, 
+    ArrowDownCircleIcon, 
+    XCircleIcon,
+    DocumentIcon,
+    ImageIcon,
+    VideoIcon,
+    AudioIcon
+} from './icons/Icons';
 
 interface TransferHistoryProps {
     history: TransferHistoryEntry[];
@@ -20,6 +31,22 @@ const StatusIcon: React.FC<{ status: TransferHistoryEntry['status'] }> = ({ stat
             return null;
     }
 }
+
+const getFileTypeIcon = (mimeType: string) => {
+    const commonClasses = "w-6 h-6 flex-shrink-0 text-gray-500 dark:text-gray-400";
+    if (!mimeType) return <DocumentIcon className={commonClasses} />;
+    if (mimeType.startsWith('image/')) {
+        return <ImageIcon className={commonClasses} />;
+    }
+    if (mimeType.startsWith('video/')) {
+        return <VideoIcon className={commonClasses} />;
+    }
+    if (mimeType.startsWith('audio/')) {
+        return <AudioIcon className={commonClasses} />;
+    }
+    return <DocumentIcon className={commonClasses} />;
+};
+
 
 const TransferHistory: React.FC<TransferHistoryProps> = ({ history, onClear }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -49,9 +76,12 @@ const TransferHistory: React.FC<TransferHistoryProps> = ({ history, onClear }) =
                              {history.map(entry => (
                                  <div key={entry.id} className="grid grid-cols-[auto,1fr,auto,auto] items-center gap-4 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
                                      <StatusIcon status={entry.status} />
-                                     <div>
-                                         <p className="font-semibold truncate">{entry.fileName}</p>
-                                         <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(entry.date).toLocaleString()}</p>
+                                     <div className="flex items-center gap-3 min-w-0">
+                                        {getFileTypeIcon(entry.fileType)}
+                                        <div className="truncate">
+                                             <p className="font-semibold truncate">{entry.fileName}</p>
+                                             <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(entry.date).toLocaleString()}</p>
+                                        </div>
                                      </div>
                                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{formatBytes(entry.fileSize)}</p>
                                      <p className={`text-sm font-bold ${
